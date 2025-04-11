@@ -114,15 +114,6 @@ void* register_indirect_addressing(CPU *cpu, const char *operand) {
     }
 }
 
-void handle_MOV(CPU* cpu, void* src, void* dest) {
-    if (cpu == NULL || src == NULL || dest == NULL) {
-        printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
-        return;
-    }
-
-    *(int*)dest = *(int*)src;
-}
-
 void* resolve_addressing(CPU* cpu, const char* operand) {
     if (cpu == NULL) {
         printf("Erreur : argument invalide (cpu est NULL).\n");

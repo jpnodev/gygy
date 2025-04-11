@@ -2,3 +2,4 @@ Makefile
 *.o
 test_cpu
 main
+*.o

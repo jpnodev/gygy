@@ -383,6 +383,51 @@ void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_c
         printf("Erreur : registre IP introuvable\n");
     }
 }
+void handle_MOV(CPU* cpu, void* src, void* dest) {
+    if (cpu == NULL || src == NULL || dest == NULL) {
+        printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
+        return;
+    }
+
+    *(int*)dest = *(int*)src;
+}
+
+/*void handle_ADD(CPU* cpu, void* src, void* dest) {
+    if (cpu == NULL || src == NULL || dest == NULL) {
+        printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
+        return;
+    }
+    *(int*)dest = (*(int*)src) + (*(int*)dest);
+}
+
+void handle_CMP(CPU* cpu, void* src, void* dest) {
+    if (cpu == NULL || src == NULL || dest == NULL) {
+        printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
+        return;
+    }
+
+    int res = (*(int*)dest) - (*(int*)src);
+    
+    if (res == 0) {
+        int* ZF = (int*)hashmap_get(cpu -> context, "ZF");
+        *ZF = 1;
+    } else if (res < 0) {
+        int* SF = (int*)hashmap_get(cpu -> context, "ZF");
+        *SF = 1;    
+    }
+}
+
+void handle_JMP(CPU* cpu, void* adress) {
+    if (cpu == NULL || adress == NULL) {
+        printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
+        return;
+    }
+    int* IP = (int*)hashmap_get(cpu -> context, "IP");
+    *IP = adress;
+}
+
+
+
 
 int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
   if (cpu == NULL || instr == NULL || src == NULL || dest == NULL) {
@@ -391,19 +436,19 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
   }
 
   if (strncmp(instr -> mnemonic, "MOV", 3) == 0) {
-    
+    handle_MOV(cpu, src, dest);
   } else if (strncmp(instr -> mnemonic, "ADD", 3) == 0) {
-
+    handle_ADD(cpu, src, dest);
   } else if (strncmp(instr -> mnemonic, "CMP", 3) == 0) {
-
+    handle_CMP(cpu, src, dest);
   } else if (strncmp(instr -> mnemonic, "JMP", 3) == 0) {
-
+    handle_JMP(cpu, ?);
   } else if (strncmp(instr -> mnemonic, "JZ", 2) == 0) {
 
   } else if (strncmp(instr -> mnemonic, "JNZ", 3) == 0) {
 
   }
-}
+} 
 
 
 
