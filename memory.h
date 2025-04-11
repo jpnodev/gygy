@@ -50,4 +50,6 @@ int remove_segment(MemoryHandler *handler, const char *name);
 
 // Cette fonction libère toute la mémoire associée au gestionnaire de mémoire (MemoryHandler).
 void memory_destroy(MemoryHandler* handler);
+
+int getSegFreePos(MemoryHandler* handler, int size)
 #endif

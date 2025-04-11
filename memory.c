@@ -195,3 +195,17 @@ void memory_destroy(MemoryHandler* handler) {
     free(handler);
 }
 
+int getSegFreePos(MemoryHandler* handler, int size) {
+    if (handler == NULL || size <= 0) {
+        perror("Erreur: gestionnaire de mémoire ou taille invalide\n");
+        return -1;
+    }
+    Segment* cour = handler->free_list;
+    while (cour != NULL) {
+        if (cour->size >= size) {
+            return cour->start; 
+        }
+        cour = cour->next;
+    }
+    return -1;
+}
