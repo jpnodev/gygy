@@ -1,0 +1,12 @@
+{
+  "files.associations": {
+    "*.py": "python",
+    "*.css": "tailwindcss",
+    "cstdlib": "c",
+    "addressing.h": "c",
+    "cpu.h": "c",
+    "memory.h": "c",
+    "assert.h": "c",
+    "debug.h": "c"
+  }
+}
