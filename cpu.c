@@ -5,17 +5,20 @@ CPU* cpu_init(int memory_size) {
   if (cpu == NULL) {
     return NULL;
   }
+  
   cpu->memory_handler = memory_init(memory_size);
   if (cpu->memory_handler == NULL) {
     free(cpu);
     return NULL;
   }
+
   cpu->context = hashmap_create();
   if (cpu->context == NULL) {
     free(cpu->memory_handler);
     free(cpu);
     return NULL;
   }
+
   cpu->constant_pool = hashmap_create();
   if (cpu->constant_pool == NULL) {
     hashmap_destroy(cpu->context);
@@ -59,13 +62,13 @@ CPU* cpu_init(int memory_size) {
 void cpu_destroy(CPU* cpu) {
     if (cpu == NULL) return;
 
-    int* IP = hashmap_get(cpu->constant_pool, "IP");
-    int* ZF = hashmap_get(cpu->constant_pool, "ZF");
-    int* SF = hashmap_get(cpu->constant_pool, "SF");
+    // int* IP = hashmap_get(cpu->constant_pool, "IP");
+    // int* ZF = hashmap_get(cpu->constant_pool, "ZF");
+    // int* SF = hashmap_get(cpu->constant_pool, "SF");
 
-    if (IP) free(IP);
-    if (ZF) free(ZF);
-    if (SF) free(SF);
+    // if (IP) free(IP);
+    // if (ZF) free(ZF);
+    // if (SF) free(SF);
 
     hashmap_destroy(cpu->constant_pool);
     hashmap_destroy(cpu->context);
