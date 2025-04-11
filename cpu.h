@@ -60,4 +60,6 @@ void allocate_code_segment(CPU *cpu, Instruction **code_instructions,int code_co
 int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest);
 void handle_MOV(CPU* cpu, void* src, void* dest);
 void handle_ADD(CPU* cpu, void* src, void* dest);
+void handle_CMP(CPU* cpu, void* src, void* dest);
+void handle_JMP(CPU* cpu, void* adress);
 #endif
