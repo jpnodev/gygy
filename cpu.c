@@ -238,30 +238,6 @@ void print_data_segment(CPU *cpu) {
     }
 }
 
-CPU* init_CPU(int size) {
-  CPU* c = (CPU*)malloc(sizeof(CPU));
-  if (c == NULL) {
-    perror("Error d'allocation de la mémoire\n");
-    return NULL;
-  }
-
-  c -> memory_handler  = memory_init(size);
-  if (c -> memory_handler == NULL) {
-    perror("Error d'allocation de la mémoire\n");
-    free(c);
-    return NULL;
-  }
-
-  c -> context = hashmap_create();
-  if (c -> context == NULL) {
-    perror("Error d'allocation de la mémoire\n");
-    memory_destroy(c -> memory_handler);
-    free(c);
-    return NULL;
-  }
-  return c;
-}
-
 char* trim(char* str) {
     while (*str == ' ' || *str == '\t' || *str == '\n' || *str == '\r') {
         str++;
