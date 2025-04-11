@@ -384,6 +384,27 @@ void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_c
     }
 }
 
+int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
+  if (cpu == NULL || instr == NULL || src == NULL || dest == NULL) {
+    printf("Erreur : argument invalide.\n");
+    return -1;
+  }
+
+  if (strncmp(instr -> mnemonic, "MOV", 3) == 0) {
+    
+  } else if (strncmp(instr -> mnemonic, "ADD", 3) == 0) {
+
+  } else if (strncmp(instr -> mnemonic, "CMP", 3) == 0) {
+
+  } else if (strncmp(instr -> mnemonic, "JMP", 3) == 0) {
+
+  } else if (strncmp(instr -> mnemonic, "JZ", 2) == 0) {
+
+  } else if (strncmp(instr -> mnemonic, "JNZ", 3) == 0) {
+
+  }
+}
+
 
 
 
