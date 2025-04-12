@@ -5,9 +5,10 @@
 #include "parser.h"
 #include <regex.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
+#define SS_SIZE 128
 
 // Cette structure pour simuler le travail du CPU. Un CPU est  composé
 // d’un gestionnaire de mémoire (MemoryHandler) permettant d’allouer
