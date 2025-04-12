@@ -485,7 +485,7 @@ void allocate_stack_segment(CPU *cpu) {
 
     // On crée le segment de pile
     Segment *prev = NULL;
-    Segment *ss_candidat = find_free_segment(cpu->memory_handler, ds->start + ds->size, SS_SIZE, prev);
+    Segment *ss_candidat = find_free_segment(cpu->memory_handler, ds->start + ds->size, SS_SIZE, &prev);
     if (ss_candidat == NULL) {
         printf("Erreur : pas assez de mémoire pour le segment de pile.\n");
         return;
@@ -495,6 +495,9 @@ void allocate_stack_segment(CPU *cpu) {
     }
 
     int r = create_segment(cpu->memory_handler, "SS", ds->start + ds->size, SS_SIZE);
+    if (r == -1 || r == 0) {
+        printf("Erreur : le stack segment n'est pas initialisé\n");
+    }
 
     *sp = ds->start + ds->size - 1;
     *bp = ds->start + ds->size - 1;
