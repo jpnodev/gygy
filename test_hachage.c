@@ -1,8 +1,8 @@
+#include "debug.h"
+#include "hachage.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "hachage.h"
-#include "debug.h"
 
 int main() {
     HashMap *map = hashmap_create();
@@ -20,9 +20,9 @@ int main() {
 
     display_hashmap(map);
 
-    char* str = hashmap_get(map, "key1");
+    char *str = hashmap_get(map, "key1");
 
-    printf("Value for key1: %s\n", str);
+    printf("Valeur de key1: %s\n", str);
     hashmap_remove(map, "key1");
 
     printf("hashmap après suppression de key1\n");

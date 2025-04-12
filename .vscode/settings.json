@@ -7,6 +7,8 @@
     "cpu.h": "c",
     "memory.h": "c",
     "assert.h": "c",
-    "debug.h": "c"
+    "debug.h": "c",
+    "hachage.h": "c",
+    "parser.h": "c"
   }
 }

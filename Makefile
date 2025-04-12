@@ -50,10 +50,10 @@ $(TEST_HACHAGE_EXEC): debug.o hachage.o memory.o parser.o test_hachage.o
 $(TEST_MEMORY_EXEC): debug.o hachage.o memory.o parser.o test_memory.o
 	$(CC) -o $@ $^
 
-$(TEST_PARSER_EXEC): debug.o hachage.o memory.o parser.o cpu.o mainParsel.o
+$(TEST_PARSER_EXEC): debug.o hachage.o memory.o parser.o cpu.o test_parser.o
 	$(CC) -o $@ $^
 
-$(TEST_CPU_EXEC): debug.o hachage.o memory.o cpu.o addressing.o main_testCPU.o
+$(TEST_CPU_EXEC): debug.o hachage.o memory.o cpu.o addressing.o test_cpu.o
 	$(CC) -o $@ $^
 
 # ============================
