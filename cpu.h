@@ -73,4 +73,6 @@ void* register_addressing(CPU *cpu, const char *operand);
 void *memory_direct_addressing(CPU *cpu, const char *operand);
 void* register_indirect_addressing(CPU *cpu, const char *operand);
 void* resolve_addressing(CPU* cpu, const char* operand);
+int run_program(CPU *cpu);
+void print_registres_et_drapeaux(CPU *cpu);
 #endif

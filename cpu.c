@@ -459,7 +459,7 @@ void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_c
         }
     }
 
-    int *IP = hashmap_get(cpu->constant_pool, "IP");
+    int *IP = (int *)hashmap_get(cpu->context, "IP");
     if (IP != NULL) {
         *IP = pos;
     } else {
@@ -539,14 +539,14 @@ void handle_HALT(CPU *cpu) {
         return;
     }
 
-    intptr_t *IP = (intptr_t *)hashmap_get(cpu->context, "IP");
+    int *IP = (int *)hashmap_get(cpu->context, "IP");
     Segment *CS = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
     if (CS == NULL || IP == NULL) {
         printf("Erreur : segment de codes ou IP n'est pas initialisé.\n");
         return;
     }
 
-    *IP = (intptr_t)((char *)(CS->start) + CS->size);
+   *IP = CS->start + CS->size;
 }
 
 int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
@@ -630,26 +630,109 @@ int execute_instruction(CPU *cpu, Instruction *instr) {
 
 Instruction *fetch_next_instruction(CPU *cpu) {
     if (cpu == NULL) {
-        printf("Erreur : argument invalide.\n");
+        printf("Erreur : argument invalide (CPU est NULL).\n");
         return NULL;
     }
+
     int *IP = (int *)hashmap_get(cpu->context, "IP");
-    Segment *CS = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
-    if (CS == NULL || IP == NULL) {
-        printf("Erreur : segment de codes ou IP n'est pas initialisé.\n");
+    Segment *CS = (Segment *)hashmap_get(cpu->context, "CS");
+
+    if (IP == NULL || CS == NULL) {
+        printf("Erreur : IP ou CS non initialisé.\n");
         return NULL;
     }
 
-    int fin = CS->start + CS->size;
+    int start = (int)((intptr_t)(CS->start));
+    int end = start + CS->size;
 
-    if (*IP + 1 < fin) {
-        *IP += 1;
-        return cpu->memory_handler->memory[(*IP)];
-    } else {
-        printf("Erreur : depasse les limites valides\n");
+    if (*IP < start || *IP >= end) {
+        printf("Erreur : IP (%d) hors des limites valides [%d, %d).\n", *IP, start, end);
+        return NULL;
     }
-    return NULL;
+
+    Instruction *instr = (Instruction *)(cpu->memory_handler->memory[*IP]);
+    (*IP)++; 
+
+    return instr;
 }
+
+int run_program(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : argument invalide (CPU est NULL).\n");
+        return -1;
+    }
+
+    printf("=== ÉTAT INITIAL ===\n");
+    print_data_segment(cpu);
+    print_registres_et_drapeaux(cpu);
+
+    while (1) {
+        Instruction *inst = fetch_next_instruction(cpu);
+        if (inst == NULL) {
+            printf("Fin du programme ou erreur de récupération d’instruction.\n");
+            break;
+        }
+
+        printf("\nInstruction à exécuter : %s %s %s\n",
+               inst->mnemonic,
+               inst->operand1 ? inst->operand1 : "",
+               inst->operand2 ? inst->operand2 : "");
+
+        printf("Appuyez sur Entrée pour exécuter l’instruction ou tapez 'q' pour quitter : ");
+        
+        char input[10];
+        fgets(input, sizeof(input), stdin);
+
+        if (strncmp(input, "q", 1) == 0) {
+            printf("Exécution interrompue par l’utilisateur.\n");
+            break;
+        }
+
+        if (execute_instruction(cpu, inst) == -1) {
+            printf("Erreur lors de l’exécution de l’instruction.\n");
+            break;
+        }
+
+        print_registres_et_drapeaux(cpu);
+    }
+
+    printf("\n=== ÉTAT FINAL ===\n");
+    print_data_segment(cpu);
+    print_registres_et_drapeaux(cpu);
+
+    return 0;
+}
+
+
+void print_registres_et_drapeaux(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : argument invalide (CPU est NULL).\n");
+        return;
+    }
+
+    int *AX = (int *)hashmap_get(cpu->context, "AX");
+    printf("Registre AX: %s%d\n", AX ? "" : "vide ", AX ? *AX : 0);
+
+    int *BX = (int *)hashmap_get(cpu->context, "BX");
+    printf("Registre BX: %s%d\n", BX ? "" : "vide ", BX ? *BX : 0);
+
+    int *CX = (int *)hashmap_get(cpu->context, "CX");
+    printf("Registre CX: %s%d\n", CX ? "" : "vide ", CX ? *CX : 0);
+
+    int *DX = (int *)hashmap_get(cpu->context, "DX");
+    printf("Registre DX: %s%d\n", DX ? "" : "vide ", DX ? *DX : 0);
+
+    // Affichage des drapeaux
+    int *IP = (int *)hashmap_get(cpu->context, "IP");
+    printf("Drapeau IP: %s%d\n", IP ? "" : "non initialisé ", IP ? *IP : 0);
+
+    int *ZF = (int *)hashmap_get(cpu->context, "ZF");
+    printf("Drapeau ZF: %s%d\n", ZF ? "" : "non initialisé ", ZF ? *ZF : 0);
+
+    int *SF = (int *)hashmap_get(cpu->context, "SF");
+    printf("Drapeau SF: %s%d\n", SF ? "" : "non initialisé ", SF ? *SF : 0);
+}
+
 
 int matches(const char* pattern , const char* string) {
     regex_t regex;

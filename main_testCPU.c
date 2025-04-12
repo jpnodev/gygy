@@ -3,7 +3,6 @@
 #include "debug.h"
 #include "parser.h"
 #include "cpu.h"
-#include "addressing.h"
 
 #include <stdio.h>
 
