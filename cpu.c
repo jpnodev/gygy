@@ -522,7 +522,7 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
     } else if (strncmp(instr->mnemonic, "CMP", 3) == 0) {
         handle_CMP(cpu, src, dest);
     } else if (strncmp(instr->mnemonic, "JMP", 3) == 0) {
-        // handle_JMP(cpu, ?);
+    handle_JMP(cpu, ?);
     } else if (strncmp(instr->mnemonic, "JZ", 2) == 0) {
 
     } else if (strncmp(instr->mnemonic, "JNZ", 3) == 0) {
