@@ -191,35 +191,9 @@ void cpu_destroy(CPU *cpu) {
         memory_destroy(cpu->memory_handler);
     }
     if (cpu->context != NULL) {
-        int *ax = (int *)hashmap_get(cpu->context, "AX");
-        int *bx = (int *)hashmap_get(cpu->context, "BX");
-        int *cx = (int *)hashmap_get(cpu->context, "CX");
-        int *dx = (int *)hashmap_get(cpu->context, "DX");
-        int *ip = (int *)hashmap_get(cpu->context, "IP");
-        int *zf = (int *)hashmap_get(cpu->context, "ZF");
-        int *sf = (int *)hashmap_get(cpu->context, "SF");
-        int *sp = (int *)hashmap_get(cpu->context, "SP");
-        int *bp = (int *)hashmap_get(cpu->context, "BP");
-        if (ax != NULL)
-            free(ax);
-        if (bx != NULL)
-            free(bx);
-        if (cx != NULL)
-            free(cx);
-        if (dx != NULL)
-            free(dx);
-        if (ip != NULL)
-            free(ip);
-        if (zf != NULL)
-            free(zf);
-        if (sf != NULL)
-            free(sf);
-        if (sp != NULL)
-            free(sp);
-        if (bp != NULL)
-            free(bp);
-        hashmap_destroy(cpu->context);
+        hashmap_destroy(cpu->context); // ❗️Этого достаточно, не нужно делать free(ax), free(bx), и т.д.
     }
+
     if (cpu->constant_pool != NULL) {
         hashmap_destroy(cpu->constant_pool);
     }

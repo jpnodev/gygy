@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include "hachage.h"
+#include "hachage.h" 
 
 // Cette structure représente un segment de mémoire ou un intervalle
 // numérique et est utilisée pour créer une liste chaînée de segments.
