@@ -1,4 +1,5 @@
 #include "hachage.h"
+#include "memory.h"
 
 unsigned long simple_hash(const char *str) {
     if (str == NULL)
@@ -15,13 +16,19 @@ unsigned long simple_hash(const char *str) {
     return res;
 }
 
-HashMap *hashmap_create() {
+HashMap *hashmap_create(hashmap_value_t type) {
+    if (type != SIMPLE && type != INT && type != SEGMENT) {
+        perror("Erreur: type de hachage non valide\n");
+        return NULL;
+    }
+
     HashMap *map = malloc(sizeof(HashMap));
     if (map == NULL) {
         perror("Erreur d'allocation de la mémoire\n");
         return NULL;
     }
 
+    map->type = type;
     map->size = TABLE_SIZE;
     map->table = calloc(map->size, sizeof(HashEntry));
 
@@ -99,6 +106,31 @@ int hashmap_remove(HashMap *map, const char *key) {
 
         if (map->table[index].key != TOMBSTONE && strcmp(map->table[index].key, key) == 0) {
             free(map->table[index].key);
+
+            // Suppression dèla valeur selon son type
+            switch (map->type) {
+            case SIMPLE:
+                break;
+            case INT:
+                if (map->table[index].value != NULL) {
+                    free(map->table[index].value);
+                }
+                break;
+            case SEGMENT:
+                if (map->table[index].value != NULL) {
+                    Segment *seg = (Segment *)map->table[index].value;
+                    while (seg != NULL) {
+                        Segment *temp = seg;
+                        seg = seg->next;
+                        free(temp);
+                    }
+                }
+                break;
+            default:
+                perror("Erreur: type de donnée hachée non valide\n");
+                break;
+            }
+
             map->table[index].key = TOMBSTONE;
             map->table[index].value = NULL;
             return 1;
