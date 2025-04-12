@@ -637,14 +637,14 @@ Instruction *fetch_next_instruction(CPU *cpu) {
     Segment *CS = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
     if (CS == NULL || IP == NULL) {
         printf("Erreur : segment de codes ou IP n'est pas initialisé.\n");
-        return;
+        return NULL;
     }
 
     int fin = CS->start + CS->size;
 
     if (*IP + 1 < fin) {
         *IP += 1;
-        return CS;
+        return cpu->memory_handler->memory[(*IP)];
     } else {
         printf("Erreur : depasse les limites valides\n");
     }
