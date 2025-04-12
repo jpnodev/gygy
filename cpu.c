@@ -65,7 +65,7 @@ CPU *cpu_init(int memory_size) {
     *sf = 0;
 
     // Initialiser la table de hachage pour le contexte
-    cpu->context = hashmap_create();
+    cpu->context = hashmap_create(BASIC_MALLOC);
     if (cpu->context == NULL) {
         printf("Erreur : échec de la création de la table de hachage.\n");
         // Libérer la mémoire allouée pour les registres
@@ -107,7 +107,7 @@ CPU *cpu_init(int memory_size) {
     }
 
     // Initialiser la table de hachage pour le pool constant
-    cpu->constant_pool = hashmap_create();
+    cpu->constant_pool = hashmap_create(BASIC_MALLOC);
     if (cpu->constant_pool == NULL) {
         printf("Erreur : échec de la création de la table de hachage pour le pool constant.\n");
         // Libérer la mémoire allouée pour les registres
@@ -549,8 +549,6 @@ void handle_HALT(CPU *cpu) {
     *IP = (intptr_t)((char *)(CS->start) + CS->size);
 }
 
-
-
 int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
     if (cpu == NULL || instr == NULL) {
         printf("Erreur : argument invalide.\n");
@@ -630,9 +628,9 @@ int execute_instruction(CPU *cpu, Instruction *instr) {
     return handle_instruction(cpu, instr, src, dest);
 }
 
-Instruction* fetch_next_instruction(CPU *cpu) {
+Instruction *fetch_next_instruction(CPU *cpu) {
     if (cpu == NULL) {
-         printf("Erreur : argument invalide.\n");
+        printf("Erreur : argument invalide.\n");
         return NULL;
     }
     int *IP = (int *)hashmap_get(cpu->context, "IP");
@@ -646,13 +644,9 @@ Instruction* fetch_next_instruction(CPU *cpu) {
 
     if (*IP + 1 < fin) {
         *IP += 1;
-        return CS->next; 
+        return CS->next;
     } else {
         printf("Erreur : depasse les limites valides\n");
     }
     return NULL;
 }
-
-
-
-
