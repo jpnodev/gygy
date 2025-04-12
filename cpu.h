@@ -4,6 +4,7 @@
 #include "memory.h"
 #include "parser.h"
 #include <stdint.h>
+#include "addressing.h"
 
 
 //Cette structure pour simuler le travail du CPU. Un CPU est  composé 
@@ -64,4 +65,5 @@ void handle_MOV(CPU* cpu, void* src, void* dest);
 void handle_ADD(CPU* cpu, void* src, void* dest);
 void handle_CMP(CPU* cpu, void* src, void* dest);
 void handle_JMP(CPU* cpu, void* adress);
+int execute_instruction(CPU *cpu, Instruction *instr);
 #endif

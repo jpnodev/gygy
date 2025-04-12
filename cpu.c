@@ -610,3 +610,24 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
     return 0;
 }
 
+int execute_instruction(CPU *cpu, Instruction *instr) {
+    if (cpu == NULL || instr == NULL) {
+        printf("Erreur : argument invalide.\n");
+        return -1;
+    }
+
+    void *src = NULL;
+    void *dest = NULL;
+
+    if (instr->operand1 != NULL) {
+        src = resolve_addressing(cpu, instr->operand1);
+    }
+
+    if (instr->operand2 != NULL) {
+        dest = resolve_addressing(cpu, instr->operand2);
+    }
+
+    return handle_instruction(cpu, instr, src, dest);
+}
+
+
