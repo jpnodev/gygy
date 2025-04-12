@@ -4,3 +4,4 @@ main
 test_cpu
 *.o
 /.vscode
+test_hachage

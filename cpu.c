@@ -630,4 +630,29 @@ int execute_instruction(CPU *cpu, Instruction *instr) {
     return handle_instruction(cpu, instr, src, dest);
 }
 
+Instruction* fetch_next_instruction(CPU *cpu) {
+    if (cpu == NULL) {
+         printf("Erreur : argument invalide.\n");
+        return NULL;
+    }
+    int *IP = (int *)hashmap_get(cpu->context, "IP");
+    Segment *CS = (Segment *)hashmap_get(cpu->context, "CS");
+    if (CS == NULL || IP == NULL) {
+        printf("Erreur : segment de codes ou IP n'est pas initialisé.\n");
+        return;
+    }
+
+    int fin = CS->start + CS->size;
+
+    if (*IP + 1 < fin) {
+        *IP += 1;
+        return CS->next; 
+    } else {
+        printf("Erreur : depasse les limites valides\n");
+    }
+    return NULL;
+}
+
+
+
 
