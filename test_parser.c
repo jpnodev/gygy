@@ -1,3 +1,4 @@
+// TEST POUR LES EXERCICES 3 ET 4
 #include "cpu.h"
 #include "debug.h"
 #include "hachage.h"
@@ -40,6 +41,35 @@ int main(void) {
     printf("\nAllocation de la mémoire Data Segment\n");
     allocate_variables(cpu, pr->data_instructions, pr->data_count);
     print_data_segment(cpu);
+
+    // Test store et load manuels
+    printf("\nTest de la fonction store et load\n");
+
+    int *val = malloc(sizeof(int));
+    *val = 764;
+
+    if (store(cpu->memory_handler, "DS", 0, val) == NULL) {
+        perror("Erreur lors du stockage de la valeur dans le segment DS\n");
+        free(val);
+        cpu_destroy(cpu);
+        free_parser_result(pr);
+        return -1;
+    }
+
+    print_data_segment(cpu);
+
+    int *loaded_val = (int *)load(cpu->memory_handler, "DS", 0);
+    if (loaded_val == NULL) {
+        perror("Erreur lors du chargement de la valeur depuis le segment DS\n");
+        free(val);
+        cpu_destroy(cpu);
+        free_parser_result(pr);
+        return -1;
+    }
+
+    printf("Valeur chargée depuis le segment DS : %d\n", *loaded_val);
+    free(val);
+
     free_parser_result(pr);
     cpu_destroy(cpu);
     return 0;

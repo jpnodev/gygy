@@ -56,6 +56,7 @@ int parserString(const char *str, int **tab);
 // Ensuite, elle parcourt chaque cellule du segment et affiche la valeur entière stockée.
 // Si le segment "DS" n'existe pas, elle affiche un message d'erreur.
 void print_data_segment(CPU *cpu);
+char *trim(char *str);
 int search_and_replace(char **str, HashMap *values);
 int resolve_constants(ParserResult *result);
 void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_count);

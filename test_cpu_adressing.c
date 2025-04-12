@@ -1,3 +1,4 @@
+// TEST POUR L'EXERCICE 5
 #include "cpu.h"
 #include "debug.h"
 #include "hachage.h"

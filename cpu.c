@@ -183,6 +183,15 @@ void *store(MemoryHandler *handler, const char *segment_name, int pos, void *dat
         return NULL;
     }
 
+    // Vérifier si la mémoire est déjà allouée
+    // @todo si on n'empeche pas d'écrire sur une cases non vide, on ne pourra pas libérer la mémoire de l'ancienne
+    // valeur.
+    // @todo on pourrait faire un free avant de réécrire ???
+    if (handler->memory[s->start + pos] != NULL) {
+        printf("Erreur : la mémoire à la position %d du segment \"%s\" est déjà allouée.\n", pos, segment_name);
+        return NULL;
+    }
+
     handler->memory[s->start + pos] = data;
     return handler->memory[s->start + pos];
 }
