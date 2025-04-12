@@ -67,12 +67,6 @@ Instruction *parse_code_instruction(const char *line, HashMap *memory_locations,
 // En cas d'erreur d'allocation mémoire ou d'ouverture de fichier, elle libère les ressources et retourne NULL.
 // Sinon, elle retourne un pointeur vers la structure ParserResult remplie.
 ParserResult *parse(const char *filename);
-// Cette fonction affiche une liste d'instructions assembleur.
-// Elle prend en paramètre un tableau de pointeurs vers des structures Instruction, ainsi que leur nombre.
-// Si la liste est vide ou NULL, elle affiche un message d'avertissement.
-// Sinon, elle parcourt chaque instruction et affiche son mnémonique, son opérande 1,
-// et son opérande 2 (si ce dernier existe), en les encadrant de guillemets.
-void afficher_instructions(Instruction **liste, int count);
 // Cette fonction libère la mémoire allouée pour une instruction.
 // Elle prend en paramètre un pointeur vers une structure Instruction.
 // Si le pointeur est NULL, elle ne fait rien.

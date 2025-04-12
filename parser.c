@@ -119,7 +119,7 @@ Instruction *parse_code_instruction(const char *line, HashMap *memory_locations,
             return NULL;
         }
         *address = code_count;
-        hashmap_insert(memory_locations, strdup(label), address);
+        hashmap_insert(memory_locations, label, address);
 
         token = strtok(NULL, " ");
         if (token)
@@ -239,22 +239,6 @@ ParserResult *parse(const char *filename) {
 
     fclose(file);
     return result;
-}
-
-void afficher_instructions(Instruction **liste, int count) {
-    if (liste == NULL || count == 0) {
-        printf("Aucune instruction à afficher.\n");
-        return;
-    }
-
-    printf("Instructions :\n");
-    for (int i = 0; i < count; i++) {
-        if (liste[i] != NULL) {
-            printf("\"%s\"  \"%s\"  \"%s\" \n", liste[i]->mnemonic, liste[i]->operand1,
-                   liste[i]->operand2 ? liste[i]->operand2 : "");
-        }
-    }
-    printf("\n");
 }
 
 void liberer_instruction(Instruction *i) {

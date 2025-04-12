@@ -53,8 +53,8 @@ CPU *setup_test_environment() {
     return cpu;
 }
 
-void* get_safe_ds_cell(CPU* cpu, int index) {
-    Segment* ds = hashmap_get(cpu->memory_handler->allocated, "DS");
+void *get_safe_ds_cell(CPU *cpu, int index) {
+    Segment *ds = hashmap_get(cpu->memory_handler->allocated, "DS");
     if (ds == NULL) {
         printf("Erreur : segment DS introuvable.\n");
         return NULL;
@@ -66,9 +66,8 @@ void* get_safe_ds_cell(CPU* cpu, int index) {
     return cpu->memory_handler->memory[ds->start + index];
 }
 
-
 int main(void) {
-    CPU* cpu = setup_test_environment();
+    CPU *cpu = setup_test_environment();
     if (!cpu) {
         printf("Erreur : échec de l'initialisation de l'environnement de test.\n");
         return -1;
@@ -79,7 +78,6 @@ int main(void) {
         printf("Erreur : Segment DS introuvable.\n");
         return -1;
     }
-
 
     void *dest = NULL;
     print_data_segment(cpu);
@@ -126,6 +124,10 @@ int main(void) {
         handle_MOV(cpu, val_src, dest);
         print_data_segment(cpu);
     }
+
+    display_memory(cpu->memory_handler);
+    print_free_segments(cpu->memory_handler);
+
     cpu_destroy(cpu);
 
     return 0;

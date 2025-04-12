@@ -95,3 +95,19 @@ void display_memory(MemoryHandler *mem) {
     display_segments(mem->free_list);
     display_hashmap(mem->allocated);
 }
+
+void display_instructions(Instruction **liste, int count) {
+    if (liste == NULL || count == 0) {
+        printf("Aucune instruction à afficher.\n");
+        return;
+    }
+
+    printf("Instructions :\n");
+    for (int i = 0; i < count; i++) {
+        if (liste[i] != NULL) {
+            printf("\"%s\"  \"%s\"  \"%s\" \n", liste[i]->mnemonic, liste[i]->operand1,
+                   liste[i]->operand2 ? liste[i]->operand2 : "");
+        }
+    }
+    printf("\n");
+}
