@@ -9,6 +9,8 @@
     "assert.h": "c",
     "debug.h": "c",
     "hachage.h": "c",
-    "parser.h": "c"
+    "parser.h": "c",
+    "stdlib.h": "c",
+    "stdio.h": "c"
   }
 }

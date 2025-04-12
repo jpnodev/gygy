@@ -1,6 +1,6 @@
 Makefile
 *.o
-test_cpu
 main
+test_cpu
 *.o
 /.vscode

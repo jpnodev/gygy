@@ -19,7 +19,7 @@ OBJ = $(SRC:.c=.o)               # Tous les fichiers objets correspondants
 MAIN_EXEC = main                 # Exécutable principal
 TEST_HACHAGE_EXEC = test_hachage
 TEST_MEMORY_EXEC = test_memory
-TEST_PARSER_EXEC = test_parser_cpu
+TEST_PARSER_EXEC = test_parser
 TEST_CPU_EXEC = test_cpu
 
 # ============================
