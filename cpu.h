@@ -3,8 +3,8 @@
 
 #include "memory.h"
 #include "parser.h"
-#include "addressing.h"
 #include <stdint.h>
+#include <regex.h>
 
 
 //Cette structure pour simuler le travail du CPU. Un CPU est  composé 
@@ -67,4 +67,10 @@ void handle_CMP(CPU* cpu, void* src, void* dest);
 void handle_JMP(CPU* cpu, void* adress);
 int execute_instruction(CPU *cpu, Instruction *instr);
 Instruction* fetch_next_instruction(CPU *cpu);
+int matches(const char* pattern , const char* string);
+void* immediate_addressing(CPU *cpu, const char *operand);
+void* register_addressing(CPU *cpu, const char *operand);
+void *memory_direct_addressing(CPU *cpu, const char *operand);
+void* register_indirect_addressing(CPU *cpu, const char *operand);
+void* resolve_addressing(CPU* cpu, const char* operand);
 #endif
