@@ -495,7 +495,7 @@ void handle_CMP(CPU *cpu, void *src, void *dest) {
         int *ZF = (int *)hashmap_get(cpu->context, "ZF");
         *ZF = 1;
     } else if (res < 0) {
-        int *SF = (int *)hashmap_get(cpu->context, "ZF");
+        int *SF = (int *)hashmap_get(cpu->context, "SF");
         *SF = 1;
     }
 }
@@ -505,30 +505,108 @@ void handle_JMP(CPU *cpu, void *adress) {
         printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
         return;
     }
-    int *IP = (int *)hashmap_get(cpu->context, "IP");
-    *IP = *(int *)adress;
+    intptr_t *IP = (intptr_t *)hashmap_get(cpu->context, "IP");
+    *IP = *(intptr_t *)adress;
 }
 
+void handle_JZ(CPU *cpu, void *adress) {
+    if (cpu == NULL || adress == NULL) {
+        printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
+        return;
+    }
+    int *ZF = (int *)hashmap_get(cpu->context, "ZF");
+    intptr_t *IP = (intptr_t *)hashmap_get(cpu->context, "IP");
+    if (*ZF == 1) {
+        *IP = *(intptr_t *)adress;
+    }
+}
+
+void handle_JNZ(CPU *cpu, void *adress) {
+    if (cpu == NULL || adress == NULL) {
+        printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
+        return;
+    }
+    int *ZF = (int *)hashmap_get(cpu->context, "ZF");
+    intptr_t *IP = (intptr_t *)hashmap_get(cpu->context, "IP");
+    if (*ZF == 0) {
+        *IP = *(intptr_t *)adress;
+    }
+}
+
+void handle_HALT(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : argument invalide (cpu est NULL).\n");
+        return;
+    }
+
+    intptr_t *IP = (intptr_t *)hashmap_get(cpu->context, "IP");
+    Segment *CS = (Segment *)hashmap_get(cpu->context, "CS");
+    if (CS == NULL || IP == NULL) {
+        printf("Erreur : segment de codes ou IP n'est pas initialisé.\n");
+        return;
+    }
+
+    *IP = (intptr_t)((char *)(CS->start) + CS->size);
+}
+
+
+
 int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
-    if (cpu == NULL || instr == NULL || src == NULL || dest == NULL) {
+    if (cpu == NULL || instr == NULL) {
         printf("Erreur : argument invalide.\n");
         return -1;
     }
 
     if (strncmp(instr->mnemonic, "MOV", 3) == 0) {
+        if (src == NULL || dest == NULL) {
+            printf("Erreur : MOV nécessite deux arguments.\n");
+            return -1;
+        }
         handle_MOV(cpu, src, dest);
+
     } else if (strncmp(instr->mnemonic, "ADD", 3) == 0) {
+        if (src == NULL || dest == NULL) {
+            printf("Erreur : ADD nécessite deux arguments.\n");
+            return -1;
+        }
         handle_ADD(cpu, src, dest);
+
     } else if (strncmp(instr->mnemonic, "CMP", 3) == 0) {
+        if (src == NULL || dest == NULL) {
+            printf("Erreur : CMP nécessite deux arguments.\n");
+            return -1;
+        }
         handle_CMP(cpu, src, dest);
+
     } else if (strncmp(instr->mnemonic, "JMP", 3) == 0) {
-    handle_JMP(cpu, ?);
+        if (src == NULL) {
+            printf("Erreur : JMP nécessite une adresse (src).\n");
+            return -1;
+        }
+        handle_JMP(cpu, src);
+
     } else if (strncmp(instr->mnemonic, "JZ", 2) == 0) {
+        if (src == NULL) {
+            printf("Erreur : JZ nécessite une adresse (src).\n");
+            return -1;
+        }
+        handle_JZ(cpu, src);
 
     } else if (strncmp(instr->mnemonic, "JNZ", 3) == 0) {
+        if (src == NULL) {
+            printf("Erreur : JNZ nécessite une adresse (src).\n");
+            return -1;
+        }
+        handle_JNZ(cpu, src);
+
+    } else if (strncmp(instr->mnemonic, "HALT", 4) == 0) {
+        handle_HALT(cpu);
+
     } else {
         printf("Erreur : instruction \"%s\" non reconnue.\n", instr->mnemonic);
         return -1;
     }
+
     return 0;
 }
+

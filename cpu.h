@@ -3,6 +3,8 @@
 
 #include "memory.h"
 #include "parser.h"
+#include <stdint.h>
+
 
 //Cette structure pour simuler le travail du CPU. Un CPU est  composé 
 //d’un gestionnaire de mémoire (MemoryHandler) permettant d’allouer
