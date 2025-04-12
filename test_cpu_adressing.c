@@ -43,6 +43,19 @@ CPU *setup_test_environment() {
     return cpu;
 }
 
+void* get_safe_ds_cell(CPU* cpu, int index) {
+    Segment* ds = hashmap_get(cpu->memory_handler->allocated, "DS");
+    if (ds == NULL) {
+        printf("Erreur : segment DS introuvable.\n");
+        return NULL;
+    }
+    if (index < 0 || index >= ds->size) {
+        printf("Erreur : index %d hors des bornes du segment DS (taille = %d).\n", index, ds->size);
+        return NULL;
+    }
+    return cpu->memory_handler->memory[ds->start + index];
+}
+
 int main(void) {
     CPU *cpu = cpu_init(MEMORY_SIZE);
     if (!cpu) {
@@ -62,7 +75,9 @@ int main(void) {
         return -1;
     }
 
+
     void *dest = NULL;
+    print_data_segment(cpu);
 
     for (int i = 0; i < 4; i++) {
         dest = get_safe_ds_cell(cpu, i);

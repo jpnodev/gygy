@@ -60,7 +60,7 @@ $(TEST_PARSER_EXEC): debug.o hachage.o memory.o parser.o cpu.o test_parser.o
 $(TEST_CPU_EXEC): debug.o hachage.o memory.o cpu.o test_cpu.o
 	$(CC) -o $@ $^
 
-$(TEST_CPU_ADRESSING_EXEC): debug.o hachage.o memory.o cpu.o test_cpu.o
+$(TEST_CPU_ADRESSING_EXEC): debug.o hachage.o memory.o cpu.o test_cpu_adressing.o 
 	$(CC) -o $@ $^
 
 # ============================
@@ -75,7 +75,7 @@ $(TEST_CPU_ADRESSING_EXEC): debug.o hachage.o memory.o cpu.o test_cpu.o
 # ============================
 
 clean:
-	rm -f *.o $(MAIN_EXEC) $(TEST_HACHAGE_EXEC) $(TEST_MEMORY_EXEC) $(TEST_PARSER_EXEC) $(TEST_CPU_EXEC) $$(TEST_CPU_ADRESSING_EXEC)
+	rm -f *.o $(MAIN_EXEC) $(TEST_HACHAGE_EXEC) $(TEST_MEMORY_EXEC) $(TEST_PARSER_EXEC) $(TEST_CPU_EXEC) $(TEST_CPU_ADRESSING_EXEC)
 
 # Nettoyage complet (fichiers temporaires en plus)
 mrproper: clean

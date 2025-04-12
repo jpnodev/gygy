@@ -56,6 +56,8 @@ int main(void) {
         printf("Erreur : échec de l'initialisation de l'environnement de test.\n");
         return -1;
     }
+
+    parse()
     cpu_destroy(cpu);
 
     return 0;
