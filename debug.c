@@ -16,6 +16,22 @@ void display_hashmap(HashMap *map) {
         printf("La table de hachage est NULL\n");
         return;
     }
+
+    switch (map->type) {
+    case SIMPLE:
+        printf("Type de données: simple\n");
+        break;
+    case BASIC_MALLOC:
+        printf("Type de données: simple allouées avec malloc\n");
+        break;
+    case SEGMENT:
+        printf("Type de données: structure SEGMENT\n");
+        break;
+    default:
+        printf("Type de données inconnu\n");
+        break;
+    }
+
     int empty = 1;
     for (int i = 0; i < map->size; i++) {
         if (map->table[i].key != NULL) {

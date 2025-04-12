@@ -50,6 +50,7 @@ int main() {
     display_memory(memory);
 
     // Suppression de segments
+    printf("\nSuppression de segments:\n");
     if ((Segment *)hashmap_get(memory->allocated, "segment_1") == NULL) {
         printf("segment 1 non trouvé\n");
     } else {
@@ -90,14 +91,6 @@ int main() {
     // Libération de la mémoire
     memory_destroy(memory);
     printf("\nMémoire libérée avec succès\n");
-
-    // Affichage de la mémoire après libération
-    // printf("Affichage de la mémoire après libération:\n");
-    // display_memory(memory);
-    // printf("Affichage de la liste des segments libres:\n");
-    // display_segments(memory->free_list);
-    // printf("Affichage de la table de hachage des segments alloués:\n");
-    // display_hashmap(memory->allocated);
 
     return 0;
 }

@@ -1,7 +1,7 @@
 #include "parser.h"
 
 ParserResult *init() {
-    ParserResult* pr = (ParserResult*)malloc(sizeof(ParserResult));
+    ParserResult *pr = (ParserResult *)malloc(sizeof(ParserResult));
     if (pr == NULL) {
         perror("Erreur d'allocation de la mémoire pour ParserResult");
         return NULL;
@@ -10,13 +10,11 @@ ParserResult *init() {
     pr->data_count = 0;
     pr->code_instructions = NULL;
     pr->code_count = 0;
-    pr->labels = hashmap_create();
-    pr->memory_locations = hashmap_create();
+    pr->labels = hashmap_create(BASIC_MALLOC);
+    pr->memory_locations = hashmap_create(BASIC_MALLOC);
 
     return pr;
 }
-
-
 
 Instruction *parse_data_instruction(const char *line, HashMap *memory_locations) {
     if (line == NULL || memory_locations == NULL) {
@@ -24,15 +22,15 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
         return NULL;
     }
 
-    static int taille = 0; 
+    static int taille = 0;
 
-    Instruction* instruction = (Instruction*)malloc(sizeof(Instruction));
+    Instruction *instruction = (Instruction *)malloc(sizeof(Instruction));
     if (instruction == NULL) {
         perror("Erreur d'allocation de la mémoire pour data_instructions");
         return NULL;
     }
 
-    char inst[20], op1[20], op2[100]; 
+    char inst[20], op1[20], op2[100];
     if (sscanf(line, "%19s %19s %[^\n]", inst, op1, op2) < 2) {
         perror("Format d'instruction invalide");
         free(instruction);
@@ -45,17 +43,21 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
 
     if (!instruction->mnemonic || !instruction->operand1 || !instruction->operand2) {
         perror("Erreur d'allocation de la mémoire pour les champs de l'instruction");
-        free(instruction->mnemonic); free(instruction->operand1); free(instruction->operand2);
+        free(instruction->mnemonic);
+        free(instruction->operand1);
+        free(instruction->operand2);
         free(instruction);
         return NULL;
     }
 
     int element_count = 1;
     if (strchr(op2, ',')) {
-        char *copy = strdup(op2); 
+        char *copy = strdup(op2);
         if (!copy) {
             perror("Erreur d'allocation de mémoire pour la copie de op2");
-            free(instruction->mnemonic); free(instruction->operand1); free(instruction->operand2);
+            free(instruction->mnemonic);
+            free(instruction->operand1);
+            free(instruction->operand2);
             free(instruction);
             return NULL;
         }
@@ -66,12 +68,12 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
             element_count++;
             token = strtok(NULL, ",");
         }
-        free(copy); 
+        free(copy);
     }
 
-    int *address = (int*)malloc(sizeof(int));
+    int *address = (int *)malloc(sizeof(int));
     *address = taille;
-    taille += element_count; 
+    taille += element_count;
 
     hashmap_insert(memory_locations, instruction->mnemonic, address);
 
@@ -84,7 +86,7 @@ Instruction *parse_code_instruction(const char *line, HashMap *memory_locations,
         return NULL;
     }
 
-    Instruction* instruction = (Instruction*)malloc(sizeof(Instruction));
+    Instruction *instruction = (Instruction *)malloc(sizeof(Instruction));
     if (instruction == NULL) {
         perror("Erreur d'allocation de la mémoire pour data_instructions");
         return NULL;
@@ -108,24 +110,28 @@ Instruction *parse_code_instruction(const char *line, HashMap *memory_locations,
     if (strchr(line_copy, ':')) { // Si une étiquette est présente
         char *token = strtok(line_copy, ":");
         strcpy(label, token);
-        
-        int *address = (int*)malloc(sizeof(int));
+
+        int *address = (int *)malloc(sizeof(int));
         if (address == NULL) {
             perror("Erreur d'allocation de mémoire pour l'adresse");
-            free(instruction); free(line_copy);
+            free(instruction);
+            free(line_copy);
             return NULL;
         }
         *address = code_count;
         hashmap_insert(memory_locations, strdup(label), address);
-        
+
         token = strtok(NULL, " ");
-        if (token) strcpy(inst, token);
-        
+        if (token)
+            strcpy(inst, token);
+
         token = strtok(NULL, ",");
-        if (token) strcpy(op1, token);
-        
+        if (token)
+            strcpy(op1, token);
+
         token = strtok(NULL, " ");
-        if (token) strcpy(op2, token);
+        if (token)
+            strcpy(op2, token);
 
     } else { // Pas d'étiquette, lecture normale
         sscanf(line_copy, "%19s %19[^,], %19s", inst, op1, op2);
@@ -137,8 +143,11 @@ Instruction *parse_code_instruction(const char *line, HashMap *memory_locations,
 
     if (!instruction->mnemonic || !instruction->operand1 || !instruction->operand2) {
         perror("Erreur d'allocation de la mémoire pour les champs de l'instruction");
-        free(instruction->mnemonic); free(instruction->operand1); free(instruction->operand2);
-        free(instruction); free(line_copy);
+        free(instruction->mnemonic);
+        free(instruction->operand1);
+        free(instruction->operand2);
+        free(instruction);
+        free(line_copy);
         return NULL;
     }
 
@@ -146,7 +155,6 @@ Instruction *parse_code_instruction(const char *line, HashMap *memory_locations,
 
     return instruction;
 }
-
 
 ParserResult *parse(const char *filename) {
     FILE *file = fopen(filename, "r");
@@ -163,8 +171,8 @@ ParserResult *parse(const char *filename) {
 
     int data_capacity = 10;
     int code_capacity = 10;
-    result->data_instructions = malloc(data_capacity * sizeof(Instruction*));
-    result->code_instructions = malloc(code_capacity * sizeof(Instruction*));
+    result->data_instructions = malloc(data_capacity * sizeof(Instruction *));
+    result->code_instructions = malloc(code_capacity * sizeof(Instruction *));
 
     if (result->data_instructions == NULL || result->code_instructions == NULL) {
         perror("Erreur d'allocation de mémoire pour les instructions");
@@ -177,7 +185,8 @@ ParserResult *parse(const char *filename) {
     int is_code_section = 0;
 
     while (fgets(line, sizeof(line), file)) {
-        if (line[0] == '\n' || line[0] == '\0' || line[0] == ';') continue;
+        if (line[0] == '\n' || line[0] == '\0' || line[0] == ';')
+            continue;
 
         if (strncmp(line, ".DATA", 5) == 0) {
             is_data_section = 1;
@@ -193,11 +202,12 @@ ParserResult *parse(const char *filename) {
 
         if (is_data_section) {
             Instruction *instruction = parse_data_instruction(line, result->memory_locations);
-            if (instruction == NULL) continue;
+            if (instruction == NULL)
+                continue;
 
             if (result->data_count >= data_capacity) {
                 data_capacity *= 2;
-                result->data_instructions = realloc(result->data_instructions, data_capacity * sizeof(Instruction*));
+                result->data_instructions = realloc(result->data_instructions, data_capacity * sizeof(Instruction *));
                 if (result->data_instructions == NULL) {
                     perror("Erreur de réallocation de mémoire pour data_instructions");
                     fclose(file);
@@ -210,11 +220,12 @@ ParserResult *parse(const char *filename) {
 
         if (is_code_section) {
             Instruction *instruction = parse_code_instruction(line, result->labels, result->code_count);
-            if (instruction == NULL) continue;
+            if (instruction == NULL)
+                continue;
 
             if (result->code_count >= code_capacity) {
                 code_capacity *= 2;
-                result->code_instructions = realloc(result->code_instructions, code_capacity * sizeof(Instruction*));
+                result->code_instructions = realloc(result->code_instructions, code_capacity * sizeof(Instruction *));
                 if (result->code_instructions == NULL) {
                     perror("Erreur de réallocation de mémoire pour code_instructions");
                     fclose(file);
@@ -239,49 +250,38 @@ void afficher_instructions(Instruction **liste, int count) {
     printf("Instructions :\n");
     for (int i = 0; i < count; i++) {
         if (liste[i] != NULL) {
-            printf("\"%s\"  \"%s\"  \"%s\" \n", 
-                   liste[i]->mnemonic, 
-                   liste[i]->operand1, 
+            printf("\"%s\"  \"%s\"  \"%s\" \n", liste[i]->mnemonic, liste[i]->operand1,
                    liste[i]->operand2 ? liste[i]->operand2 : "");
         }
     }
     printf("\n");
 }
 
-void liberer_instruction(Instruction* i) {
-    if (i == NULL) return;
-    free(i -> mnemonic);
-    free(i -> operand1);
-    free(i -> operand2);
+void liberer_instruction(Instruction *i) {
+    if (i == NULL)
+        return;
+    free(i->mnemonic);
+    free(i->operand1);
+    free(i->operand2);
     free(i);
 }
 
-
 void free_parser_result(ParserResult *result) {
-    if (result == NULL) return;
-    
+    if (result == NULL)
+        return;
+
     for (int i = 0; i < result->data_count; i++) {
         liberer_instruction(result->data_instructions[i]);
     }
-    free(result->data_instructions);  
+    free(result->data_instructions);
 
     for (int i = 0; i < result->code_count; i++) {
         liberer_instruction(result->code_instructions[i]);
     }
-    free(result->code_instructions);  
+    free(result->code_instructions);
 
-    hashmap_destroy(result->labels);  
-    hashmap_destroy(result->memory_locations);  
-    
-    free(result);  
+    hashmap_destroy(result->labels);
+    hashmap_destroy(result->memory_locations);
+
+    free(result);
 }
-
-
-
-
-
-
-
-    
-
-    

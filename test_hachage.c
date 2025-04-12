@@ -5,7 +5,7 @@
 #include <string.h>
 
 int main() {
-    HashMap *map = hashmap_create();
+    HashMap *map = hashmap_create(SIMPLE);
     if (map == NULL) {
         printf("Erreur de creation de hashmap\n");
         return -1;

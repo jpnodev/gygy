@@ -17,7 +17,7 @@ unsigned long simple_hash(const char *str) {
 }
 
 HashMap *hashmap_create(hashmap_value_t type) {
-    if (type != SIMPLE && type != INT && type != SEGMENT) {
+    if (type != SIMPLE && type != BASIC_MALLOC && type != SEGMENT) {
         perror("Erreur: type de hachage non valide\n");
         return NULL;
     }
@@ -111,20 +111,14 @@ int hashmap_remove(HashMap *map, const char *key) {
             switch (map->type) {
             case SIMPLE:
                 break;
-            case INT:
+            case BASIC_MALLOC:
                 if (map->table[index].value != NULL) {
                     free(map->table[index].value);
                 }
                 break;
             case SEGMENT:
-                if (map->table[index].value != NULL) {
-                    Segment *seg = (Segment *)map->table[index].value;
-                    while (seg != NULL) {
-                        Segment *temp = seg;
-                        seg = seg->next;
-                        free(temp);
-                    }
-                }
+                // Le segment est déjà libéré dans la fonction remove_segment
+                // Il ne faut pas appeler hashmap_remove seule sur un segment
                 break;
             default:
                 perror("Erreur: type de donnée hachée non valide\n");
@@ -148,6 +142,31 @@ void hashmap_destroy(HashMap *map) {
     for (int i = 0; i < map->size; i++) {
         if (map->table[i].key != NULL && map->table[i].key != TOMBSTONE) {
             free(map->table[i].key);
+
+            // Suppression de la valeur selon son type
+            switch (map->type) {
+            case SIMPLE:
+                break;
+            case BASIC_MALLOC:
+                if (map->table[i].value != NULL) {
+                    free(map->table[i].value);
+                }
+                break;
+            case SEGMENT:
+                if (map->table[i].value != NULL) {
+                    Segment *s = (Segment *)map->table[i].value;
+                    while (s != NULL) {
+                        Segment *next = s->next;
+                        free(s);
+                        s = next;
+                    }
+                }
+                break;
+            default:
+                perror("Erreur: type de donnée hachée non valide\n");
+                break;
+            }
+            map->table[i].value = NULL;
         }
     }
 

@@ -32,7 +32,7 @@ MemoryHandler *memory_init(int size) {
     mem->free_list->size = size;
     mem->free_list->next = NULL;
 
-    mem->allocated = hashmap_create();
+    mem->allocated = hashmap_create(SEGMENT);
     if (mem->allocated == NULL) {
         perror("Erreur d'allocation de la mémoire pour allocated");
         free(mem->free_list);
@@ -139,7 +139,6 @@ int remove_segment(MemoryHandler *handler, const char *name) {
         printf("Erreur: segment non trouvé\n");
         return -1;
     }
-
     if (hashmap_remove(handler->allocated, name) != 1) {
         printf("Erreur\n");
         return -1;

@@ -9,7 +9,7 @@
 #define TABLE_SIZE 128
 #define TOMBSTONE ((void *)-1)
 
-typedef enum { SIMPLE, INT, SEGMENT } hashmap_value_t;
+typedef enum { SIMPLE, BASIC_MALLOC, SEGMENT } hashmap_value_t;
 
 // Cette structure représente un élément de la table de hachage.
 // Elle contient une clé (`key`), générée à partir des données de l’élément, permettant de
@@ -34,7 +34,7 @@ unsigned long simple_hash(const char *str);
 
 // Cette fonction initialise la structure HashMap avec 0 comme des element dans tab avec taille TABLE_SIZE
 // Renvoi NULL en cas d'erreur ou pointer vers structure crée
-HashMap *hashmap_create();
+HashMap *hashmap_create(hashmap_value_t type);
 
 // La fonction 'hashmap_insert' ajoute une nouvelle paire ('key', 'value') dans la table de hachage,
 // en utilisant le probing linéaire pour gérer les collisions.
