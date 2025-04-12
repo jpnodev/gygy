@@ -34,13 +34,20 @@ CPU *cpu_init(int memory_size) {
     if (ax == NULL || bx == NULL || cx == NULL || dx == NULL || ip == NULL || zf == NULL || sf == NULL) {
         printf("Erreur : échec de l'allocation de mémoire pour les registres.\n");
         // Libérer la mémoire allouée pour les registres
-        free(ax);
-        free(bx);
-        free(cx);
-        free(dx);
-        free(ip);
-        free(zf);
-        free(sf);
+        if (ax != NULL)
+            free(ax);
+        if (bx != NULL)
+            free(bx);
+        if (cx != NULL)
+            free(cx);
+        if (dx != NULL)
+            free(dx);
+        if (ip != NULL)
+            free(ip);
+        if (zf != NULL)
+            free(zf);
+        if (sf != NULL)
+            free(sf);
         // Libérer la mémoire allouée pour le memory_handler
         memory_destroy(cpu->memory_handler);
         // Libérer la mémoire allouée pour le CPU
@@ -262,6 +269,7 @@ void allocate_variables(CPU *cpu, Instruction **data_instructions, int data_coun
     int current_pos = pos;
 
     // Счётчик для отслеживания уже выделенных значений
+    // Compteur pour suivre le nombre de valeurs déjà allouées
     int values_written = 0;
     int **allocated_vals = malloc(sizeof(int *) * total_values);
 
@@ -277,6 +285,7 @@ void allocate_variables(CPU *cpu, Instruction **data_instructions, int data_coun
                 perror("Erreur d'allocation pour val");
 
                 // Очистка ранее выделенных значений
+                // Libération des valeurs déjà allouées
                 for (int x = 0; x < values_written; x++) {
                     free(allocated_vals[x]);
                 }
@@ -497,7 +506,7 @@ void handle_JMP(CPU *cpu, void *adress) {
         return;
     }
     int *IP = (int *)hashmap_get(cpu->context, "IP");
-    *IP = adress;
+    *IP = *(int *)adress;
 }
 
 int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
@@ -513,9 +522,13 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
     } else if (strncmp(instr->mnemonic, "CMP", 3) == 0) {
         handle_CMP(cpu, src, dest);
     } else if (strncmp(instr->mnemonic, "JMP", 3) == 0) {
-    handle_JMP(cpu, ?);
+        // handle_JMP(cpu, ?);
     } else if (strncmp(instr->mnemonic, "JZ", 2) == 0) {
 
     } else if (strncmp(instr->mnemonic, "JNZ", 3) == 0) {
+    } else {
+        printf("Erreur : instruction \"%s\" non reconnue.\n", instr->mnemonic);
+        return -1;
     }
+    return 0;
 }
