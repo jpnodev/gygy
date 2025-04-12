@@ -191,7 +191,7 @@ void cpu_destroy(CPU *cpu) {
         memory_destroy(cpu->memory_handler);
     }
     if (cpu->context != NULL) {
-        hashmap_destroy(cpu->context); // ❗️Этого достаточно, не нужно делать free(ax), free(bx), и т.д.
+        hashmap_destroy(cpu->context); 
     }
 
     if (cpu->constant_pool != NULL) {
@@ -583,22 +583,6 @@ void handle_HALT(CPU *cpu) {
     *IP = CS->start + CS->size;
 }
 
-void handle_HALT(CPU *cpu) {
-    if (cpu == NULL) {
-        printf("Erreur : argument invalide (cpu est NULL).\n");
-        return;
-    }
-
-    intptr_t *IP = (intptr_t *)hashmap_get(cpu->context, "IP");
-    Segment *CS = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
-    if (CS == NULL || IP == NULL) {
-        printf("Erreur : segment de codes ou IP n'est pas initialisé.\n");
-        return;
-    }
-
-    *IP = (intptr_t)((char *)(CS->start) + CS->size);
-}
-
 void handle_PUSH(CPU *cpu, void *src) {
 
     if (cpu == NULL) {
@@ -615,7 +599,7 @@ void handle_PUSH(CPU *cpu, void *src) {
         }
     }
 
-    int res = push_value(cpu->memory_handler, *(int *)src);
+    int res = push_value(cpu, *(int *)src);
     if (res == -1) {
         printf("Erreur : échec de l'empilement de la valeur.\n");
         return;
@@ -638,7 +622,7 @@ void handle_POP(CPU *cpu, void *dest) {
         }
     }
 
-    int res = push_value(cpu->memory_handler, *(int *)dest);
+    int res = push_value(cpu, *(int *)dest);
     if (res == -1) {
         printf("Erreur : échec de l'empilement de la valeur.\n");
         return;
@@ -1025,7 +1009,7 @@ int push_value(CPU *cpu, int value) {
 
         // Convertir la valeur en chaîne de caractères
         char snum[20];
-        itoa(value, snum, 10);
+        sprintf(snum, "%d", value);
 
         int res_insert = hashmap_insert(cpu->constant_pool, snum, valeur);
         if (res_insert != 1) {

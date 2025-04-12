@@ -6,6 +6,8 @@
 #include <regex.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
+
 
 // Cette structure pour simuler le travail du CPU. Un CPU est  composé
 // d’un gestionnaire de mémoire (MemoryHandler) permettant d’allouer
