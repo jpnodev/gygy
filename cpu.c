@@ -55,7 +55,7 @@ CPU* cpu_init(int memory_size) {
   *SF = 0;
   hashmap_insert(cpu->constant_pool, "IP", IP);
   hashmap_insert(cpu->constant_pool, "ZF", ZF);
-  hashmap_insert(cpu->constant_pool, "SF", SF);
+  hashmap_insert(cpu->constant_pool, "SF", SF); // FAIRE AX, BX, DX; 
   return cpu;
 }
 
@@ -379,7 +379,7 @@ void handle_ADD(CPU* cpu, void* src, void* dest) {
     *(int*)dest = (*(int*)src) + (*(int*)dest);
 }
 
-void handle_CMP(CPU* cpu, void* src, void* dest) {
+/*void handle_CMP(CPU* cpu, void* src, void* dest) {
     if (cpu == NULL || src == NULL || dest == NULL) {
         printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
         return;
