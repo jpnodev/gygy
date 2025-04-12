@@ -1,4 +1,3 @@
-#include "addressing.h"
 #include "cpu.h"
 #include "debug.h"
 #include "hachage.h"
@@ -57,7 +56,6 @@ int main(void) {
         printf("Erreur : échec de l'initialisation de l'environnement de test.\n");
         return -1;
     }
-
     cpu_destroy(cpu);
 
     return 0;

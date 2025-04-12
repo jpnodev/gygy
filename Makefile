@@ -21,6 +21,7 @@ TEST_HACHAGE_EXEC = test_hachage
 TEST_MEMORY_EXEC = test_memory
 TEST_PARSER_EXEC = test_parser
 TEST_CPU_EXEC = test_cpu
+TEST_CPU_ADRESSING_EXEC = test_cpu_adressing
 
 # ============================
 # Règle par défaut (appelée par "make")
@@ -33,11 +34,14 @@ run_parser: $(TEST_PARSER_EXEC)
 run_cpu: $(TEST_CPU_EXEC)
 	./$(TEST_CPU_EXEC)
 
+run_cpu_adressing: $(TEST_CPU_ADRESSING_EXEC)
+	./$(TEST_CPU_ADRESSING_EXEC)
+
 # ============================
 # Compilation de l'exécutable principal
 # ============================
 
-$(MAIN_EXEC): debug.o hachage.o memory.o parser.o cpu.o main.o addressing.o
+$(MAIN_EXEC): debug.o hachage.o memory.o parser.o cpu.o main.o 
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 # ============================
@@ -53,7 +57,10 @@ $(TEST_MEMORY_EXEC): debug.o hachage.o memory.o parser.o test_memory.o
 $(TEST_PARSER_EXEC): debug.o hachage.o memory.o parser.o cpu.o test_parser.o
 	$(CC) -o $@ $^
 
-$(TEST_CPU_EXEC): debug.o hachage.o memory.o cpu.o addressing.o test_cpu.o
+$(TEST_CPU_EXEC): debug.o hachage.o memory.o cpu.o test_cpu.o
+	$(CC) -o $@ $^
+
+$(TEST_CPU_ADRESSING_EXEC): debug.o hachage.o memory.o cpu.o test_cpu.o
 	$(CC) -o $@ $^
 
 # ============================
@@ -68,7 +75,7 @@ $(TEST_CPU_EXEC): debug.o hachage.o memory.o cpu.o addressing.o test_cpu.o
 # ============================
 
 clean:
-	rm -f *.o $(MAIN_EXEC) $(TEST_HACHAGE_EXEC) $(TEST_MEMORY_EXEC) $(TEST_PARSER_EXEC) $(TEST_CPU_EXEC)
+	rm -f *.o $(MAIN_EXEC) $(TEST_HACHAGE_EXEC) $(TEST_MEMORY_EXEC) $(TEST_PARSER_EXEC) $(TEST_CPU_EXEC) $$(TEST_CPU_ADRESSING_EXEC)
 
 # Nettoyage complet (fichiers temporaires en plus)
 mrproper: clean

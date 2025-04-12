@@ -1,4 +1,3 @@
-#include "addressing.h"
 #include "cpu.h"
 #include "debug.h"
 #include "hachage.h"
@@ -7,59 +6,55 @@
 
 #include <stdio.h>
 
+#define MEMORY_SIZE 1024
+
 CPU *setup_test_environment() {
 
-    CPU *cpu = cpu_init(1024);
+    // Initialiser le CPU
+    CPU *cpu = cpu_init(MEMORY_SIZE);
     if (!cpu) {
-        printf("Erreur : échec de l'initialisation du CPU.\n");
+        printf("Error: CPU initialization failed\n");
         return NULL;
     }
 
-    int *ax = hashmap_insert(cpu->context, "AX", ax);
-    int *bx = hashmap_insert(cpu->context, "BX", bx);
-    int *cx = hashmap_insert(cpu->context, "CX", cx);
-    int *dx = hashmap_insert(cpu->context, "DX", dx);
+    // Initialiser les registres avec des valeurs spécifiques
+    int *ax = (int *)hashmap_get(cpu->context, "AX");
+    int *bx = (int *)hashmap_get(cpu->context, "BX");
+    int *cx = (int *)hashmap_get(cpu->context, "CX");
+    int *dx = (int *)hashmap_get(cpu->context, "DX");
 
     *ax = 3;
     *bx = 6;
     *cx = 100;
     *dx = 0;
 
+    // Creer et initialiser le segment de donnees
     if (!hashmap_get(cpu->memory_handler->allocated, "DS")) {
         create_segment(cpu->memory_handler, "DS", 0, 20);
 
+        // Initialiser le segment de donn es avec des valeurs de test
         for (int i = 0; i < 10; i++) {
             int *value = (int *)malloc(sizeof(int));
-            *value = i * 10 + 5;
+            *value = i * 10 + 5; // Valeurs 5, 15, 25, 35...
             store(cpu->memory_handler, "DS", i, value);
         }
     }
-
-    printf("Environnement de test initialisé.\n");
+    printf("Test environment initialized.\n");
     return cpu;
 }
 
-void *get_safe_ds_cell(CPU *cpu, int index) {
-    Segment *ds = hashmap_get(cpu->memory_handler->allocated, "DS");
-    if (ds == NULL) {
-        printf("Erreur : segment DS introuvable.\n");
-        return NULL;
-    }
-    if (index < 0 || index >= ds->size) {
-        printf("Erreur : index %d hors des bornes du segment DS (taille = %d).\n", index, ds->size);
-        return NULL;
-    }
-    return cpu->memory_handler->memory[ds->start + index];
-}
-
 int main(void) {
-
-    CPU *cpu = cpu_init(1024);
-    if (!setup_test_environment(cpu)) {
+    CPU *cpu = cpu_init(MEMORY_SIZE);
+    if (!cpu) {
+        printf("Erreur : échec de l'initialisation du CPU.\n");
         return -1;
     }
-    cpu_destroy(cpu);
-    print_data_segment(cpu);
+
+    cpu = setup_test_environment();
+    if (!cpu) {
+        printf("Erreur : échec de l'initialisation de l'environnement de test.\n");
+        return -1;
+    }
 
     Segment *ds = hashmap_get(cpu->memory_handler->allocated, "DS");
     if (ds == NULL) {
@@ -111,5 +106,7 @@ int main(void) {
         handle_MOV(cpu, val_src, dest);
         print_data_segment(cpu);
     }
+    cpu_destroy(cpu);
+
     return 0;
 }
