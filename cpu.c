@@ -540,7 +540,7 @@ void handle_HALT(CPU *cpu) {
     }
 
     intptr_t *IP = (intptr_t *)hashmap_get(cpu->context, "IP");
-    Segment *CS = (Segment *)hashmap_get(cpu->context, "CS");
+    Segment *CS = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
     if (CS == NULL || IP == NULL) {
         printf("Erreur : segment de codes ou IP n'est pas initialisé.\n");
         return;
@@ -634,7 +634,7 @@ Instruction *fetch_next_instruction(CPU *cpu) {
         return NULL;
     }
     int *IP = (int *)hashmap_get(cpu->context, "IP");
-    Segment *CS = (Segment *)hashmap_get(cpu->context, "CS");
+    Segment *CS = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
     if (CS == NULL || IP == NULL) {
         printf("Erreur : segment de codes ou IP n'est pas initialisé.\n");
         return;
@@ -644,7 +644,7 @@ Instruction *fetch_next_instruction(CPU *cpu) {
 
     if (*IP + 1 < fin) {
         *IP += 1;
-        return CS->next;
+        return CS;
     } else {
         printf("Erreur : depasse les limites valides\n");
     }
