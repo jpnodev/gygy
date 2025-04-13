@@ -85,4 +85,5 @@ int push_value(CPU *cpu, int value);
 int pop_value(CPU *cpu, int *dest);
 int run_program(CPU *cpu);
 void print_registres_et_drapeaux(CPU *cpu);
+void afficher_instructions(Instruction **liste, int count);
 #endif

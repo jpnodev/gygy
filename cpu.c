@@ -486,45 +486,23 @@ void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_c
     }
 }
 
-void allocate_stack_segment(CPU *cpu) {
-    if (cpu == NULL) {
-        printf("Erreur : argument invalide.\n");
+void afficher_instructions(Instruction **liste, int count) {
+    if (liste == NULL || count == 0) {
+        printf("Aucune instruction à afficher.\n");
         return;
     }
 
-    // On vérifie que data segment est déjà alloué
-    Segment *ds = hashmap_get(cpu->memory_handler->allocated, "DS");
-    if (ds == NULL) {
-        printf("Erreur : le segment de données n'est pas alloué.\n");
-        return;
-    }
+    for (int i = 0; i < count; i++) {
+        Instruction *instr = liste[i];
+        if (instr == NULL) continue;
 
-    // Initialise le Stack Segment
-    int *sp = hashmap_get(cpu->context, "SP");
-    int *bp = hashmap_get(cpu->context, "BP");
-    if (sp == NULL || bp == NULL) {
-        printf("Erreur : registre SP ou BP introuvable.\n");
-        return;
+        printf("%d : %s", i, instr->mnemonic);
+        if (instr->operand1)
+            printf(" %s", instr->operand1);
+        if (instr->operand2)
+            printf(" %s", instr->operand2);
+        printf("\n");
     }
-
-    // On crée le segment de pile
-    Segment *prev = NULL;
-    Segment *ss_candidat = find_free_segment(cpu->memory_handler, ds->start + ds->size, SS_SIZE, &prev);
-    if (ss_candidat == NULL) {
-        printf("Erreur : pas assez de mémoire pour le segment de pile.\n");
-        return;
-    } else if (prev != ds) {
-        printf("Erreur : le segment de pile n'est pas adjacent au segment de données.\n");
-        return;
-    }
-
-    int r = create_segment(cpu->memory_handler, "SS", ds->start + ds->size, SS_SIZE);
-    if (r == -1 || r == 0) {
-        printf("Erreur : le stack segment n'est pas initialisé\n");
-    }
-
-    *sp = ds->start + ds->size - 1;
-    *bp = ds->start + ds->size - 1;
 }
 
 void handle_MOV(CPU *cpu, void *src, void *dest) {
@@ -1158,6 +1136,47 @@ int pop_value(CPU *cpu, int *dest) {
     }
 
     return 0;
+}
+
+void allocate_stack_segment(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : argument invalide.\n");
+        return;
+    }
+
+    // On vérifie que data segment est déjà alloué
+    Segment *ds = hashmap_get(cpu->memory_handler->allocated, "DS");
+    if (ds == NULL) {
+        printf("Erreur : le segment de données n'est pas alloué.\n");
+        return;
+    }
+
+    // Initialise le Stack Segment
+    int *sp = hashmap_get(cpu->context, "SP");
+    int *bp = hashmap_get(cpu->context, "BP");
+    if (sp == NULL || bp == NULL) {
+        printf("Erreur : registre SP ou BP introuvable.\n");
+        return;
+    }
+
+    // On crée le segment de pile
+    Segment *prev = NULL;
+    Segment *ss_candidat = find_free_segment(cpu->memory_handler, ds->start + ds->size, SS_SIZE, &prev);
+    if (ss_candidat == NULL) {
+        printf("Erreur : pas assez de mémoire pour le segment de pile.\n");
+        return;
+    } else if (prev != ds) {
+        printf("Erreur : le segment de pile n'est pas adjacent au segment de données.\n");
+        return;
+    }
+
+    int r = create_segment(cpu->memory_handler, "SS", ds->start + ds->size, SS_SIZE);
+    if (r == -1 || r == 0) {
+        printf("Erreur : le stack segment n'est pas initialisé\n");
+    }
+
+    *sp = ds->start + ds->size - 1;
+    *bp = ds->start + ds->size - 1;
 }
 
 #pragma endregion
