@@ -1,6 +1,6 @@
 #include "cpu.h"
 
-#pragma region CPU 
+#pragma region CPU
 
 CPU *cpu_init(int memory_size) {
     if (memory_size <= 0) {
@@ -167,7 +167,6 @@ void cpu_destroy(CPU *cpu) {
 
 #pragma endregion
 
-
 #pragma region DATA
 
 void *store(MemoryHandler *handler, const char *segment_name, int pos, void *data) {
@@ -199,6 +198,8 @@ void *store(MemoryHandler *handler, const char *segment_name, int pos, void *dat
         return NULL;
     }
 
+    // Allouer la mémoire pour la nouvelle valeur
+    hashmap_insert(handler->allocated, segment_name, data);
     handler->memory[s->start + pos] = data;
     return handler->memory[s->start + pos];
 }
@@ -224,7 +225,8 @@ void *load(MemoryHandler *handler, const char *segment_name, int pos) {
     return handler->memory[s->start + pos];
 }
 
-int parserString(const char *str, int **tab) {
+int parserString(const char *str, int ***tab) {
+    printf("parserString: %s\n", str);
     if (str == NULL)
         return -1;
 
@@ -237,6 +239,7 @@ int parserString(const char *str, int **tab) {
         if (copy[i] == ',')
             count++;
     }
+    printf("count = %d\n", count);
 
     *tab = malloc(sizeof(int) * count);
     if (!*tab) {
@@ -247,7 +250,19 @@ int parserString(const char *str, int **tab) {
     char *token = strtok(copy, ",");
     int i = 0;
     while (token != NULL && i < count) {
-        (*tab)[i++] = atoi(token);
+        printf("token before trim: %s\n", token);
+        token = trim(token);
+        printf("token = %s\n", token);
+        (*tab)[i] = malloc(sizeof(int));
+        if ((*tab)[i] == NULL) {
+            printf("Erreur d'allocation mémoire pour le tableau.\n");
+            for (int j = 0; j < i; j++) {
+                free((*tab)[j]);
+            }
+            free(copy);
+            return -1;
+        }
+        *(*tab)[i++] = atoi(token);
         token = strtok(NULL, ",");
     }
 
@@ -262,72 +277,43 @@ void allocate_variables(CPU *cpu, Instruction **data_instructions, int data_coun
     }
 
     static int pos = 0;
-    int total_values = 0;
+    int real_data_count = 0;
 
+    // Calcul du vrai nombre de données
     for (int i = 0; i < data_count; i++) {
-        int *temp_tab;
-        int k = parserString(data_instructions[i]->operand2, &temp_tab);
-        if (k > 0) {
-            total_values += k;
-            free(temp_tab);
+        if (data_instructions[i]->operand2 != NULL) {
+            real_data_count++;
+            for (int j = 0; data_instructions[i]->operand2[j]; j++) {
+                if (data_instructions[i]->operand2[j] == ',')
+                    real_data_count++;
+            }
         }
     }
 
-    int r = create_segment(cpu->memory_handler, "DS", pos, total_values);
-    if (r <= 0)
+    // Allocation de mémoire pour le segment de données
+    int r = create_segment(cpu->memory_handler, "DS", pos, real_data_count);
+    if (r <= 0) {
+        printf("Erreur lors de la création du segment de données.\n");
         return;
-
-    int current_pos = pos;
-
-    // Счётчик для отслеживания уже выделенных значений
-    // Compteur pour suivre le nombre de valeurs déjà allouées
-    int values_written = 0;
-    int **allocated_vals = malloc(sizeof(int *) * total_values);
-
-    for (int i = 0; i < data_count; i++) {
-        int *tab;
-        int k = parserString(data_instructions[i]->operand2, &tab);
-        if (k <= 0 || tab == NULL)
-            continue;
-
-        for (int j = 0; j < k; j++) {
-            int *val = malloc(sizeof(int));
-            if (val == NULL) {
-                perror("Erreur d'allocation pour val");
-
-                // Очистка ранее выделенных значений
-                // Libération des valeurs déjà allouées
-                for (int x = 0; x < values_written; x++) {
-                    free(allocated_vals[x]);
-                }
-                free(allocated_vals);
-                free(tab);
-                remove_segment(cpu->memory_handler, "DS");
-                return;
-            }
-
-            *val = tab[j];
-
-            if (store(cpu->memory_handler, "DS", current_pos - pos, val) == NULL) {
-                free(val);
-                for (int x = 0; x < values_written; x++) {
-                    free(allocated_vals[x]);
-                }
-                free(allocated_vals);
-                free(tab);
-                remove_segment(cpu->memory_handler, "DS");
-                return;
-            }
-
-            allocated_vals[values_written++] = val;
-            current_pos++;
-        }
-
-        free(tab);
     }
 
-    free(allocated_vals);
-    pos += total_values;
+    // Allocation des variables et insertion dans la mémoire
+    for (int i = 0; i < data_count; i++) {
+        int **temp_tab;
+        int data_count = parserString(data_instructions[i]->operand2, &temp_tab);
+        for (int j = 0; j < data_count; j++) {
+            if (temp_tab[j] != NULL) {
+                free(temp_tab[j]);
+                if (store(cpu->memory_handler, "DS", pos, temp_tab[j]) == NULL) {
+                    printf("Erreur lors du stockage de la variable %d\n", i);
+                    //@todo libérer datasegment et toutes les valeurs dans la hashmap
+                    return;
+                }
+                pos++;
+            }
+        }
+        free(temp_tab);
+    }
 }
 
 void print_data_segment(CPU *cpu) {
@@ -346,7 +332,8 @@ void print_data_segment(CPU *cpu) {
         int *valeur = (int *)(cpu->memory_handler->memory[index]);
 
         if (valeur != NULL) {
-            printf("DS[%d] = %d\n", i, *valeur);
+
+            printf("DS[%d] = %d, [%p]\n", i, *valeur, valeur);
         } else {
             printf("DS[%d] = (vide)\n", i);
         }
@@ -494,7 +481,8 @@ void afficher_instructions(Instruction **liste, int count) {
 
     for (int i = 0; i < count; i++) {
         Instruction *instr = liste[i];
-        if (instr == NULL) continue;
+        if (instr == NULL)
+            continue;
 
         printf("%d : %s", i, instr->mnemonic);
         if (instr->operand1)
@@ -845,7 +833,6 @@ int matches(const char *pattern, const char *string) {
     return result == 0;
 }
 
-
 void *immediate_addressing(CPU *cpu, const char *operand) {
     if (cpu == NULL || operand == NULL) {
         printf("Erreur : argument invalide (cpu ou operand est NULL).\n");
@@ -878,10 +865,9 @@ void *immediate_addressing(CPU *cpu, const char *operand) {
         }
         return valeur;
     }
-    //printf("Ce n'est pas un adressage immédiat : %s\n", op);
+    // printf("Ce n'est pas un adressage immédiat : %s\n", op);
     return NULL;
 }
-
 
 void *register_addressing(CPU *cpu, const char *operand) {
     if (cpu == NULL || operand == NULL) {
@@ -893,23 +879,22 @@ void *register_addressing(CPU *cpu, const char *operand) {
     strncpy(cleaned, operand, sizeof(cleaned) - 1);
     cleaned[sizeof(cleaned) - 1] = '\0';
 
-    char *op = trim(cleaned); 
+    char *op = trim(cleaned);
     printf("🔍 operand reçu = '%s'\n", op);
 
     if (matches("^[ABCD]X$", op)) {
         printf("Reconnu comme registre valide.\n");
-        int *valeur = (int *)hashmap_get(cpu->context, op);  
+        int *valeur = (int *)hashmap_get(cpu->context, op);
         if (valeur == NULL) {
             printf("Registre %s est vide ou non initialisé.\n", op);
             return NULL;
         }
         return valeur;
-    } 
+    }
 
-     //printf("Ce n'est pas un adressage par régistre : %s\n", op);
+    // printf("Ce n'est pas un adressage par régistre : %s\n", op);
     return NULL;
 }
-
 
 void *memory_direct_addressing(CPU *cpu, const char *operand) {
     if (cpu == NULL || operand == NULL) {
@@ -942,10 +927,9 @@ void *memory_direct_addressing(CPU *cpu, const char *operand) {
 
         return valeur;
     }
-    //printf("Ce n'est pas un adressage mémoire direct : %s\n", op);
+    // printf("Ce n'est pas un adressage mémoire direct : %s\n", op);
     return NULL;
 }
-
 
 void *register_indirect_addressing(CPU *cpu, const char *operand) {
     if (cpu == NULL || operand == NULL) {
@@ -968,12 +952,10 @@ void *register_indirect_addressing(CPU *cpu, const char *operand) {
         strncpy(registre, trimmed + 1, len - 2);
         registre[len - 2] = '\0';
         return register_addressing(cpu, registre);
-    } 
-    //printf("Cette commande n'est pas un adressage indirect par registre : %s\n", operand);
+    }
+    // printf("Cette commande n'est pas un adressage indirect par registre : %s\n", operand);
     return NULL;
-    
 }
-
 
 void *resolve_addressing(CPU *cpu, const char *operand) {
     if (cpu == NULL) {
