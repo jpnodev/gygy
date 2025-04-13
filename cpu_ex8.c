@@ -1042,6 +1042,30 @@ void handle_POP(CPU *cpu, void *dest) {
     }
 }
 
+void handle_ALLOC(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : argument invalide (cpu est NULL).\n");
+        return;
+    }
+    int res = alloc_es_segment(cpu);
+    if (res == -1) {
+        printf("Erreur : échec de l'allocation du segment ES.\n");
+        return;
+    }
+}
+
+void handle_FREE(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : argument invalide (cpu est NULL).\n");
+        return;
+    }
+    int res = free_es_segment(cpu);
+    if (res == -1) {
+        printf("Erreur : échec de la libération du segment ES.\n");
+        return;
+    }
+}
+
 int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
     if (cpu == NULL || instr == NULL) {
         printf("Erreur : argument invalide.\n");
@@ -1102,6 +1126,16 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
         // Ici, src (operand 1) est la destination où la valeur sera dépilée
         // dest (operand 2) n'est pas utilisé
         handle_POP(cpu, src);
+
+    } else if (strncmp(instr->mnemonic, "ALLOC", 5) == 0) {
+        // Ici, src (operand 1) est la destination où la valeur sera dépilée
+        // dest (operand 2) n'est pas utilisé
+        handle_ALLOC(cpu);
+
+    } else if (strncmp(instr->mnemonic, "FREE", 4) == 0) {
+        // Ici, src (operand 1) est la destination où la valeur sera dépilée
+        // dest (operand 2) n'est pas utilisé
+        handle_FREE(cpu);
 
     } else {
         printf("Erreur : instruction \"%s\" non reconnue.\n", instr->mnemonic);
@@ -1306,14 +1340,11 @@ int alloc_es_segment(CPU *cpu) {
         return -1;
     }
 
-    // Initialise le segment ES avec dez 0
-    // On cherche si 0 existe déjà dans constant pool
-    int *zero = (int *)hashmap_get(cpu->constant_pool, "0");
-    if (zero == NULL) {
-        // On ajoute 0 au pool constant
-        zero = malloc(sizeof(int));
+    // On initialise le segment ES avec des 0
+    for (int i = 0; i < *ax; i++) {
+        int *zero = malloc(sizeof(int));
         if (zero == NULL) {
-            perror("Erreur d'allocation pour 0");
+            printf("Erreur : échec de l'allocation de mémoire pour le segment ES.\n");
             int rem = remove_segment(cpu->memory_handler, "ES");
             if (rem == -1) {
                 printf("Erreur : échec de la suppression du segment ES.\n");
@@ -1321,25 +1352,14 @@ int alloc_es_segment(CPU *cpu) {
             *zf = 1;
             return -1;
         }
-    }
-
-    *zero = 0;
-    int res_insert = hashmap_insert(cpu->constant_pool, "0", zero);
-    if (res_insert != 1) {
-        printf("Erreur : échec de l'insertion de 0 dans le pool constant.\n");
-        free(zero);
-        int rem = remove_segment(cpu->memory_handler, "ES");
-        if (rem == -1) {
-            printf("Erreur : échec de la suppression du segment ES.\n");
-        }
-        *zf = 1;
-        return -1;
-    }
-
-    // On initialise le segment ES avec des 0
-    for (int i = 0; i < *ax; i++) {
-        if (store(cpu->memory_handler, "ES", es_segment->start + i, zero) == NULL) {
+        *zero = 0;
+        // On stocke la valeur 0 dans le segment ES
+        if (store(cpu->memory_handler, "ES", i, zero) == NULL) {
             printf("Erreur : échec de l'initialisation du segment ES.\n");
+            // On libère tous les zeros déjà alloués
+            for (int j = 0; j < i; j++) {
+                free(cpu->memory_handler->memory[es_segment->start + j]);
+            }
             int rem = remove_segment(cpu->memory_handler, "ES");
             if (rem == -1) {
                 printf("Erreur : échec de la suppression du segment ES.\n");
@@ -1350,6 +1370,49 @@ int alloc_es_segment(CPU *cpu) {
     }
     *zf = 0;
     *es = res;
+    return 0;
+}
+
+int free_es_segment(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : argument invalide (CPU est NULL).\n");
+        return -1;
+    }
+
+    // Obtention des pointeurs
+    Segment *es_segment = hashmap_get(cpu->memory_handler->allocated, "ES");
+    if (es_segment == NULL) {
+        printf("Erreur : segment ES introuvable.\n");
+        return -1;
+    }
+
+    int *es = (int *)hashmap_get(cpu->context, "ES");
+    if (es == NULL) {
+        printf("Erreur : registre ES introuvable.\n");
+        return -1;
+    }
+
+    // Libérer la mémoire allouée pour le segment ES
+    for (int i = 0; i < es_segment->size; i++) {
+        int *val = load(cpu->memory_handler, "ES", i);
+        if (val == NULL) {
+            printf("Erreur : échec de la récupération de la valeur dans le segment ES.\n");
+            return -1;
+        }
+        free(val);
+    }
+
+    // Supprimer le segment ES de la table des segments alloués
+    int res = remove_segment(cpu->memory_handler, "ES");
+    if (res == -1) {
+        printf("Erreur : échec de la suppression du segment ES.\n");
+        return -1;
+    }
+
+    // Réinitialiser le registre ES à -1
+    *es = -1;
+
+    printf("Segment ES libéré avec succès.\n");
     return 0;
 }
 
