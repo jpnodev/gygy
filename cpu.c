@@ -225,44 +225,34 @@ void *load(MemoryHandler *handler, const char *segment_name, int pos) {
     return handler->memory[s->start + pos];
 }
 
-int parserString(const char *str, int ***tab) {
-    printf("parserString: %s\n", str);
-    if (str == NULL)
-        return -1;
-
-    char *copy = strdup(str);
-    if (!copy)
-        return -1;
+int parserStringVal(const char *str) {
+    if (str == NULL) return 0;
 
     int count = 1;
-    for (int i = 0; copy[i]; i++) {
-        if (copy[i] == ',')
-            count++;
+    for (int i = 0; str[i]; i++) {
+        if (str[i] == ',') count++;
     }
-    printf("count = %d\n", count);
+    return count;
+}
 
+int parserString(const char *str, int **tab) {
+    if (str == NULL || tab == NULL) return 0;
+
+    int count = parserStringVal(str);
     *tab = malloc(sizeof(int) * count);
-    if (!*tab) {
-        free(copy);
-        return -1;
+    if (*tab == NULL) {
+        printf("Erreur d'allocation mémoire dans parserString\n");
+        return 0;
     }
+
+    char *copy = strdup(str);
+    if (copy == NULL) return 0;
 
     char *token = strtok(copy, ",");
-    int i = 0;
-    while (token != NULL && i < count) {
-        printf("token before trim: %s\n", token);
-        token = trim(token);
-        printf("token = %s\n", token);
-        (*tab)[i] = malloc(sizeof(int));
-        if ((*tab)[i] == NULL) {
-            printf("Erreur d'allocation mémoire pour le tableau.\n");
-            for (int j = 0; j < i; j++) {
-                free((*tab)[j]);
-            }
-            free(copy);
-            return -1;
-        }
-        *(*tab)[i++] = atoi(token);
+    int index = 0;
+
+    while (token != NULL && index < count) {
+        (*tab)[index++] = atoi(token);
         token = strtok(NULL, ",");
     }
 
@@ -270,49 +260,47 @@ int parserString(const char *str, int ***tab) {
     return count;
 }
 
-void allocate_variables(CPU *cpu, Instruction **data_instructions, int data_count) {
-    if (cpu == NULL || data_instructions == NULL || *data_instructions == NULL || data_count <= 0) {
+
+void allocate_variables(CPU *cpu, Instruction **data_instructions, int data_count, ParserResult* pr) {
+    if (cpu == NULL || data_instructions == NULL || data_count < 0 || pr == NULL) {
         printf("Erreur : argument invalide.\n");
         return;
     }
 
-    static int pos = 0;
-    int real_data_count = 0;
+    int total_values = 0;
 
-    // Calcul du vrai nombre de données
     for (int i = 0; i < data_count; i++) {
-        if (data_instructions[i]->operand2 != NULL) {
-            real_data_count++;
-            for (int j = 0; data_instructions[i]->operand2[j]; j++) {
-                if (data_instructions[i]->operand2[j] == ',')
-                    real_data_count++;
-            }
-        }
+        total_values += parserStringVal(data_instructions[i]->operand2);
     }
 
-    // Allocation de mémoire pour le segment de données
-    int r = create_segment(cpu->memory_handler, "DS", pos, real_data_count);
-    if (r <= 0) {
-        printf("Erreur lors de la création du segment de données.\n");
-        return;
-    }
+    int pos = getSegFreePos(cpu->memory_handler, total_values);
+    create_segment(cpu->memory_handler, "DS", pos, total_values);
 
-    // Allocation des variables et insertion dans la mémoire
+    int current_index = 0;
+
     for (int i = 0; i < data_count; i++) {
-        int **temp_tab;
-        int data_count = parserString(data_instructions[i]->operand2, &temp_tab);
-        for (int j = 0; j < data_count; j++) {
-            if (temp_tab[j] != NULL) {
-                free(temp_tab[j]);
-                if (store(cpu->memory_handler, "DS", pos, temp_tab[j]) == NULL) {
-                    printf("Erreur lors du stockage de la variable %d\n", i);
-                    //@todo libérer datasegment et toutes les valeurs dans la hashmap
-                    return;
-                }
-                pos++;
+        int *values;
+        int count = parserString(data_instructions[i]->operand2, &values);
+        const char *var_name = data_instructions[i]->mnemonic;
+
+        for (int j = 0; j < count; j++) {
+            int *val = malloc(sizeof(int));
+            *val = values[j];
+
+            if (store(cpu->memory_handler, "DS", current_index, val) == NULL) {
+                printf("Erreur de stockage à l'index %d\n", current_index);
+                free(val);
+                continue;
             }
+
+            if (j == 0 && var_name != NULL) {
+                hashmap_insert(pr->memory_locations, var_name, (void *)(long)(current_index));
+            }
+
+            current_index++;
         }
-        free(temp_tab);
+
+        free(values);
     }
 }
 
@@ -333,7 +321,7 @@ void print_data_segment(CPU *cpu) {
 
         if (valeur != NULL) {
 
-            printf("DS[%d] = %d, [%p]\n", i, *valeur, valeur);
+            printf("DS[%d] = %d\n", i, *valeur);
         } else {
             printf("DS[%d] = (vide)\n", i);
         }
@@ -425,10 +413,13 @@ int resolve_constants(ParserResult *result) {
 
     for (int j = 0; j < result->code_count; j++) {
         Instruction *instr = result->code_instructions[j];
-        if (instr->operand1)
+        if (instr->operand1) {
+            search_and_replace(&(instr->operand1), result->memory_locations);
             search_and_replace(&(instr->operand1), result->labels);
-        if (instr->operand2)
+        } if (instr->operand2) {
+            search_and_replace(&(instr->operand2), result->memory_locations);
             search_and_replace(&(instr->operand2), result->labels);
+        }
     }
 
     return 0;

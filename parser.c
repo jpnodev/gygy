@@ -75,7 +75,7 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
     *address = taille;
     taille += element_count;
 
-    hashmap_insert(memory_locations, instruction->mnemonic, address);
+    //hashmap_insert(memory_locations, instruction->mnemonic, address);
 
     return instruction;
 }
