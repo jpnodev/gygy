@@ -524,12 +524,23 @@ void handle_CMP(CPU *cpu, void *src, void *dest) {
 }
 
 void handle_JMP(CPU *cpu, void *adress) {
-    if (cpu == NULL || adress == NULL) {
-        printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
+    if (cpu == NULL || adress == NULL) return;
+
+    int *val = (int *)adress; 
+
+    Segment *CS = hashmap_get(cpu->memory_handler->allocated, "CS");
+    if (CS == NULL) {
+        printf("Erreur : segment de code CS introuvable.\n");
         return;
     }
-    intptr_t *IP = (intptr_t *)hashmap_get(cpu->context, "IP");
-    *IP = *(intptr_t *)adress;
+
+    int *IP = (int *)hashmap_get(cpu->context, "IP");
+    if (IP == NULL) {
+        printf("Erreur : registre IP introuvable.\n");
+        return;
+    }
+
+    *IP = CS->start + *val;
 }
 
 void handle_JZ(CPU *cpu, void *adress) {
@@ -696,17 +707,26 @@ int execute_instruction(CPU *cpu, Instruction *instr) {
     void *src = NULL;
     void *dest = NULL;
 
-    if (instr->operand1 != NULL) {
-        dest = resolve_addressing(cpu, instr->operand1);
-        printf("DEST: %d\n", *(int *)dest);
-    }
-
-    if (instr->operand2 != NULL) {
-        src = resolve_addressing(cpu, instr->operand2);
+    if (strncmp(instr->mnemonic, "JMP", 3) == 0 || strncmp(instr->mnemonic, "JZ", 2) == 0 || 
+        strncmp(instr->mnemonic, "JNZ", 3) == 0 || strncmp(instr->mnemonic, "PUSH", 4) == 0 || 
+        strncmp(instr->mnemonic, "POP", 3) == 0 ) {
+        src = resolve_addressing(cpu, instr->operand1, instr->mnemonic);
         printf("SRC: %d\n", *(int *)src);
-    }
+        return handle_instruction(cpu, instr, src, dest);
+    } else if (strncmp(instr->mnemonic, "HALT", 4) == 0) {
+        return handle_instruction(cpu, instr, src, dest);
+    } else {
+        if (instr->operand1 != NULL) {
+            dest = resolve_addressing(cpu, instr->operand1, instr->mnemonic);
+            printf("DEST: %d\n", *(int *)dest);
+        }
 
-    return handle_instruction(cpu, instr, src, dest);
+        if (instr->operand2 != NULL) {
+            src = resolve_addressing(cpu, instr->operand2, instr->mnemonic);
+            printf("SRC: %d\n", *(int *)src);
+        }
+        return handle_instruction(cpu, instr, src, dest);
+    }
 }
 
 Instruction *fetch_next_instruction(CPU *cpu) {
@@ -734,6 +754,8 @@ Instruction *fetch_next_instruction(CPU *cpu) {
         printf("Erreur : IP (%d) hors des limites valides [%d, %d).\n", *IP, start, end);
         return NULL;
     }
+
+    printf("IP: %d\n", *IP);
 
     Instruction *instr = (Instruction *)(cpu->memory_handler->memory[*IP]);
     (*IP)++;
@@ -892,11 +914,8 @@ void *register_addressing(CPU *cpu, const char *operand) {
     return NULL;
 }
 
-void *memory_direct_addressing(CPU *cpu, const char *operand) {
-    if (cpu == NULL || operand == NULL) {
-        printf("Erreur : argument invalide (cpu ou operand est NULL).\n");
-        return NULL;
-    }
+void *memory_direct_addressing(CPU *cpu, const char *operand, const char *mnemonic) {
+    if (cpu == NULL || operand == NULL || mnemonic == NULL) return NULL;
 
     char cleaned[32];
     strncpy(cleaned, operand, sizeof(cleaned) - 1);
@@ -905,27 +924,28 @@ void *memory_direct_addressing(CPU *cpu, const char *operand) {
 
     if (matches("^\\[-?[0-9]+\\]$", op)) {
         int address;
-        if (sscanf(op, "[%d]", &address) != 1) {
-            printf("Erreur : extraction de l'adresse a échoué : %s\n", op);
-            return NULL;
+        if (sscanf(op, "[%d]", &address) != 1) return NULL;
+
+        const char *segment = (strncmp(mnemonic, "JMP", 3) == 0 || strncmp(mnemonic, "JZ", 2) == 0 || strncmp(mnemonic, "JNZ", 3) == 0) ? "CS" : "DS";
+        Segment *seg = hashmap_get(cpu->memory_handler->allocated, segment);
+        if (!seg) return NULL;
+
+        if (address < 0 || address >= seg->size) return NULL;
+
+        // 👇 вместо возврата указателя на инструкцию
+        if (strncmp(mnemonic, "JMP", 3) == 0 || strncmp(mnemonic, "JZ", 2) == 0 || strncmp(mnemonic, "JNZ", 3) == 0) {
+            int *val = malloc(sizeof(int));
+            *val = address; // вернуть индекс, не адрес памяти
+            return val;
         }
 
-        if (address < 0 || address >= cpu->memory_handler->total_size) {
-            printf("Adresse hors limites : %d\n", address);
-            return NULL;
-        }
-
-        void *valeur = cpu->memory_handler->memory[address];
-        if (valeur == NULL) {
-            printf("Aucune donnée à l'adresse %d.\n", address);
-            return NULL;
-        }
-
-        return valeur;
+        return cpu->memory_handler->memory[seg->start + address];
     }
-    // printf("Ce n'est pas un adressage mémoire direct : %s\n", op);
+
     return NULL;
 }
+
+
 
 void *register_indirect_addressing(CPU *cpu, const char *operand) {
     if (cpu == NULL || operand == NULL) {
@@ -953,58 +973,28 @@ void *register_indirect_addressing(CPU *cpu, const char *operand) {
     return NULL;
 }
 
-void *resolve_addressing(CPU *cpu, const char *operand) {
-    if (cpu == NULL) {
-        printf("Erreur : argument invalide (cpu est NULL).\n");
-        return NULL;
-    }
-    if (operand == NULL) {
-        printf("Erreur : argument invalide (operand est NULL).\n");
-        return NULL;
-    }
+void *resolve_addressing(CPU *cpu, const char *operand, const char *mnemonic) {
+    if (cpu == NULL || operand == NULL || mnemonic == NULL) return NULL;
 
     void *result;
 
-    // On essaye d'abord l'adressage immédiat
     result = immediate_addressing(cpu, operand);
-    if (result != NULL) {
-        printf("immediate_addressing %d\n", *(int *)result);
-        return result;
-    } else {
-        printf("not immediate_addressing\n");
-    }
+    if (result != NULL) return result;
 
-    // Ensuite, on essaye l'adressage par registre
     result = register_addressing(cpu, operand);
-    if (result != NULL) {
-        printf("register_addressing %d\n", *(int *)result);
-        return result;
-    } else {
-        printf("not register_addressing\n");
-    }
+    if (result != NULL) return result;
 
-    // Adressage direct mémoire
-    result = memory_direct_addressing(cpu, operand);
-    if (result != NULL) {
-        printf("memory_direct_addressing %d\n", *(int *)result);
-        return result;
-    } else {
-        printf("not memory_direct_addressing\n");
-    }
+    result = memory_direct_addressing(cpu, operand, mnemonic); 
+    if (result != NULL) return result;
 
-    // Adressage indirect par registre
     result = register_indirect_addressing(cpu, operand);
-    if (result != NULL) {
-        printf("register_indirect_addressing %d\n", *(int *)result);
-        return result;
-    } else {
-        printf("not register_indirect_addressing\n");
-    }
+    if (result != NULL) return result;
 
-    // Aucun adressage n'a fonctionné
+
     printf("Erreur : aucun mode d'adressage valide trouvé pour l'opérande : %s\n", operand);
     return NULL;
 }
+
 
 #pragma endregion
 
