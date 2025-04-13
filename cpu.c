@@ -1,5 +1,7 @@
 #include "cpu.h"
 
+#pragma region CPU 
+
 CPU *cpu_init(int memory_size) {
     if (memory_size <= 0) {
         printf("Erreur : taille de mémoire invalide.\n");
@@ -162,6 +164,11 @@ void cpu_destroy(CPU *cpu) {
     }
     free(cpu);
 }
+
+#pragma endregion
+
+
+#pragma region DATA
 
 void *store(MemoryHandler *handler, const char *segment_name, int pos, void *data) {
     if (segment_name == NULL || handler == NULL || data == NULL) {
@@ -346,6 +353,10 @@ void print_data_segment(CPU *cpu) {
     }
 }
 
+#pragma endregion
+
+#pragma region Constants
+
 char *trim(char *str) {
     while (*str == ' ' || *str == '\t' || *str == '\n' || *str == '\r')
         str++;
@@ -435,6 +446,10 @@ int resolve_constants(ParserResult *result) {
 
     return 0;
 }
+
+#pragma endregion
+
+#pragma region CODE
 
 void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_count) {
     if (cpu == NULL || code_instructions == NULL || code_count < 0) {
@@ -737,10 +752,14 @@ Instruction *fetch_next_instruction(CPU *cpu) {
     }
 
     int *IP = (int *)hashmap_get(cpu->context, "IP");
-    Segment *CS = (Segment *)hashmap_get(cpu->context, "CS");
+    Segment *CS = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
 
-    if (IP == NULL || CS == NULL) {
-        printf("Erreur : IP ou CS non initialisé.\n");
+    if (IP == NULL) {
+        printf("Erreur : IP  non initialisé.\n");
+        return NULL;
+    }
+    if (CS == NULL) {
+        printf("Erreur : CS  non initialisé.\n");
         return NULL;
     }
 
@@ -771,25 +790,25 @@ int run_program(CPU *cpu) {
     while (1) {
         Instruction *inst = fetch_next_instruction(cpu);
         if (inst == NULL) {
-            printf("Fin du programme ou erreur de récupération d’instruction.\n");
+            printf("Fin du programme ou erreur de récupération d'instruction.\n");
             break;
         }
 
         printf("\nInstruction à exécuter : %s %s %s\n", inst->mnemonic, inst->operand1 ? inst->operand1 : "",
                inst->operand2 ? inst->operand2 : "");
 
-        printf("Appuyez sur Entrée pour exécuter l’instruction ou tapez 'q' pour quitter : ");
+        printf("Appuyez sur Entrée pour exécuter l'instruction ou tapez 'q' pour quitter : ");
 
         char input[10];
         fgets(input, sizeof(input), stdin);
 
         if (strncmp(input, "q", 1) == 0) {
-            printf("Exécution interrompue par l’utilisateur.\n");
+            printf("Exécution interrompue par l'utilisateur.\n");
             break;
         }
 
         if (execute_instruction(cpu, inst) == -1) {
-            printf("Erreur lors de l’exécution de l’instruction.\n");
+            printf("Erreur lors de l'exécution de l'instruction.\n");
             break;
         }
 
@@ -832,6 +851,10 @@ void print_registres_et_drapeaux(CPU *cpu) {
     printf("Drapeau SF: %s%d\n", SF ? "" : "non initialisé ", SF ? *SF : 0);
 }
 
+#pragma endregion
+
+#pragma region Adressing
+
 int matches(const char *pattern, const char *string) {
     regex_t regex;
     int result = regcomp(&regex, pattern, REG_EXTENDED);
@@ -844,36 +867,43 @@ int matches(const char *pattern, const char *string) {
     return result == 0;
 }
 
+
 void *immediate_addressing(CPU *cpu, const char *operand) {
     if (cpu == NULL || operand == NULL) {
         printf("Erreur : argument invalide (cpu ou operand est NULL).\n");
         return NULL;
     }
 
-    if (matches("^-?[0-9]+$", operand)) {
-        int *valeur = (int *)hashmap_get(cpu->constant_pool, operand);
+    char cleaned[32];
+    strncpy(cleaned, operand, sizeof(cleaned) - 1);
+    cleaned[sizeof(cleaned) - 1] = '\0';
+    char *op = trim(cleaned);
+
+    if (matches("^-?[0-9]+$", op)) {
+        int *valeur = (int *)hashmap_get(cpu->constant_pool, op);
         if (valeur == NULL) {
             valeur = (int *)malloc(sizeof(int));
             if (valeur == NULL) {
                 perror("Erreur d'allocation pour valeur");
                 return NULL;
             }
+
             char *endptr;
-            *valeur = (int)strtol(operand, &endptr, 10);
+            *valeur = (int)strtol(op, &endptr, 10);
             if (*endptr != '\0') {
-                printf("Erreur : operand n'est pas un entier valide : %s\n", operand);
+                printf("Erreur : operand n'est pas un entier valide : %s\n", op);
                 free(valeur);
                 return NULL;
             }
-            hashmap_insert(cpu->constant_pool, operand, valeur);
+
+            hashmap_insert(cpu->constant_pool, op, valeur);
         }
         return valeur;
-    } else {
-        printf("Cette commande n'est pas un adressage immédiat : %s\n", operand);
-        return NULL;
     }
+    //printf("Ce n'est pas un adressage immédiat : %s\n", op);
     return NULL;
 }
+
 
 void *register_addressing(CPU *cpu, const char *operand) {
     if (cpu == NULL || operand == NULL) {
@@ -881,18 +911,27 @@ void *register_addressing(CPU *cpu, const char *operand) {
         return NULL;
     }
 
-    if (matches("^(A|B|C|D)X$", operand)) {
-        int *valeur = (int *)hashmap_get(cpu->context, operand);
+    char cleaned[32];
+    strncpy(cleaned, operand, sizeof(cleaned) - 1);
+    cleaned[sizeof(cleaned) - 1] = '\0';
+
+    char *op = trim(cleaned); 
+    printf("🔍 operand reçu = '%s'\n", op);
+
+    if (matches("^[ABCD]X$", op)) {
+        printf("Reconnu comme registre valide.\n");
+        int *valeur = (int *)hashmap_get(cpu->context, op);  
         if (valeur == NULL) {
-            printf("Registre %s est vide ou non initialisé.\n", operand);
+            printf("Registre %s est vide ou non initialisé.\n", op);
             return NULL;
         }
         return valeur;
-    } else {
-        printf("Cette commande n'est pas un adressage par registre : %s\n", operand);
-        return NULL;
-    }
+    } 
+
+     //printf("Ce n'est pas un adressage par régistre : %s\n", op);
+    return NULL;
 }
+
 
 void *memory_direct_addressing(CPU *cpu, const char *operand) {
     if (cpu == NULL || operand == NULL) {
@@ -900,31 +939,35 @@ void *memory_direct_addressing(CPU *cpu, const char *operand) {
         return NULL;
     }
 
-    if (matches("^\\[-?[0-9]+\\]$", operand)) {
+    char cleaned[32];
+    strncpy(cleaned, operand, sizeof(cleaned) - 1);
+    cleaned[sizeof(cleaned) - 1] = '\0';
+    char *op = trim(cleaned);
+
+    if (matches("^\\[-?[0-9]+\\]$", op)) {
         int address;
-        if (sscanf(operand, "[%d]", &address) != 1) {
-            printf("Erreur : extraction de l'adresse a échoué : %s\n", operand);
+        if (sscanf(op, "[%d]", &address) != 1) {
+            printf("Erreur : extraction de l'adresse a échoué : %s\n", op);
             return NULL;
         }
 
-        int cell_count = cpu->memory_handler->total_size / sizeof(void *);
-        if (address < 0 || address >= cell_count) {
-            printf("Hors limites mémoire ! Adresse : %d (max : %d)\n", address, cell_count - 1);
+        if (address < 0 || address >= cpu->memory_handler->total_size) {
+            printf("Adresse hors limites : %d\n", address);
             return NULL;
         }
 
         void *valeur = cpu->memory_handler->memory[address];
         if (valeur == NULL) {
-            printf("Erreur : aucune donnée à l'adresse mémoire %d.\n", address);
+            printf("Aucune donnée à l'adresse %d.\n", address);
             return NULL;
         }
 
         return valeur;
-    } else {
-        printf("Cette commande n'est pas un adressage par registre : %s\n", operand);
-        return NULL;
     }
+    //printf("Ce n'est pas un adressage mémoire direct : %s\n", op);
+    return NULL;
 }
+
 
 void *register_indirect_addressing(CPU *cpu, const char *operand) {
     if (cpu == NULL || operand == NULL) {
@@ -932,17 +975,27 @@ void *register_indirect_addressing(CPU *cpu, const char *operand) {
         return NULL;
     }
 
-    if (matches("^\\[(A|B|C|D)X\\]$", operand)) {
+    char cleaned[32];
+    strncpy(cleaned, operand, sizeof(cleaned) - 1);
+    cleaned[sizeof(cleaned) - 1] = '\0';
+    char *trimmed = trim(cleaned);
+
+    if (matches("^\\[(A|B|C|D)X\\]$", trimmed)) {
         char registre[10];
-        size_t len = strlen(operand);
-        strncpy(registre, operand + 1, len - 2);
+        size_t len = strlen(trimmed);
+        if (len < 4) {
+            printf("Erreur : nom de registre invalide.\n");
+            return NULL;
+        }
+        strncpy(registre, trimmed + 1, len - 2);
         registre[len - 2] = '\0';
         return register_addressing(cpu, registre);
-    } else {
-        printf("Cette commande n'est pas un adressage indirect par registre : %s\n", operand);
-        return NULL;
-    }
+    } 
+    //printf("Cette commande n'est pas un adressage indirect par registre : %s\n", operand);
+    return NULL;
+    
 }
+
 
 void *resolve_addressing(CPU *cpu, const char *operand) {
     if (cpu == NULL) {
@@ -955,6 +1008,7 @@ void *resolve_addressing(CPU *cpu, const char *operand) {
     }
 
     void *result;
+    printf("%s", (operand));
 
     // On essaye d'abord l'adressage immédiat
     result = immediate_addressing(cpu, operand);
@@ -984,6 +1038,10 @@ void *resolve_addressing(CPU *cpu, const char *operand) {
     printf("Erreur : aucun mode d'adressage valide trouvé pour l'opérande : %s\n", operand);
     return NULL;
 }
+
+#pragma endregion
+
+#pragma region Stack
 
 int push_value(CPU *cpu, int value) {
     if (cpu == NULL) {
@@ -1101,3 +1159,5 @@ int pop_value(CPU *cpu, int *dest) {
 
     return 0;
 }
+
+#pragma endregion

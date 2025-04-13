@@ -8,57 +8,50 @@
 
 #define MEMORY_SIZE 1024
 
-CPU *setup_test_environment() {
-
-    // Initialiser le CPU
-    CPU *cpu = cpu_init(MEMORY_SIZE);
-    if (!cpu) {
-        printf("Error: CPU initialization failed\n");
-        return NULL;
-    }
-
-    // Initialiser les registres avec des valeurs spécifiques
-    int *ax = (int *)hashmap_get(cpu->context, "AX");
-    int *bx = (int *)hashmap_get(cpu->context, "BX");
-    int *cx = (int *)hashmap_get(cpu->context, "CX");
-    int *dx = (int *)hashmap_get(cpu->context, "DX");
-
-    *ax = 3;
-    *bx = 6;
-    *cx = 100;
-    *dx = 0;
-
-    // Creer et initialiser le segment de donnees
-    if (!hashmap_get(cpu->memory_handler->allocated, "DS")) {
-        create_segment(cpu->memory_handler, "DS", 0, 20);
-
-        // Initialiser le segment de donn es avec des valeurs de test
-        for (int i = 0; i < 10; i++) {
-            int *value = (int *)malloc(sizeof(int));
-            *value = i * 10 + 5; // Valeurs 5, 15, 25, 35...
-            store(cpu->memory_handler, "DS", i, value);
-        }
-    }
-    printf("Test environment initialized.\n");
-    return cpu;
-}
-
 int main(void) {
-
+    // 1. Инициализация CPU
     CPU *cpu = cpu_init(MEMORY_SIZE);
     if (!cpu) {
         printf("Erreur : échec de l'initialisation du CPU.\n");
         return -1;
     }
 
-    cpu = setup_test_environment();
-    if (!cpu) {
-        printf("Erreur : échec de l'initialisation de l'environnement de test.\n");
+    // 2. Разбор файла
+    ParserResult* pr = parse("filename.txt");
+    if (pr == NULL) {
+        cpu_destroy(cpu);
         return -1;
     }
 
-    parse()
+    // 3. Разрешить константы
+    if (resolve_constants(pr) == -1) {
+        printf("Erreur : échec de la résolution des constantes.\n");
+        free_parser_result(pr);
+        cpu_destroy(cpu);
+        return -1;
+    }
+
+    // 4. Выделить и инициализировать .DATA
+    allocate_variables(cpu, pr->data_instructions, pr->data_count);
+
+    // 5. Напечатать содержимое сегмента данных
+    printf("\n=== SEGMENT DE DONNÉES INIT ===\n");
+    print_data_segment(cpu);
+
+    // 6. Напечатать ассемблер .CODE
+    printf("\n=== INSTRUCTIONS DE CODE ===\n");
+    afficher_instructions(pr->code_instructions, pr->code_count);
+
+    // 7. Распределить и загрузить .CODE
+    allocate_code_segment(cpu, pr->code_instructions, pr->code_count);
+
+    // 8. Запустить программу
+    run_program(cpu);
+
+    // 9. Освобождение ресурсов
+    free_parser_result(pr);
     cpu_destroy(cpu);
 
     return 0;
 }
+

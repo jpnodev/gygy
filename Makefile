@@ -57,7 +57,7 @@ $(TEST_MEMORY_EXEC): debug.o hachage.o memory.o parser.o test_memory.o
 $(TEST_PARSER_EXEC): debug.o hachage.o memory.o parser.o cpu.o test_parser.o
 	$(CC) -o $@ $^
 
-$(TEST_CPU_EXEC): debug.o hachage.o memory.o cpu.o test_cpu.o
+$(TEST_CPU_EXEC): debug.o hachage.o memory.o cpu.o test_cpu.o parser.o
 	$(CC) -o $@ $^
 
 $(TEST_CPU_ADRESSING_EXEC): debug.o hachage.o memory.o cpu.o test_cpu_adressing.o 
