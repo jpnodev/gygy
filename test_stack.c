@@ -29,8 +29,16 @@ int main(void) {
     printf("=== ETAT INITIAL ===\n");
     print_data_segment(cpu);
 
+    print_free_list(cpu->memory_handler);
+
     //printf("=== TABLE HACHAGE DES INDEX ===\n");
     //display_hashmap(pr->memory_locations);
+
+    printf("=== ALLOCATION STACK SEGMENT ===\n");
+    allocate_stack_segment(cpu);
+
+    printf("=== ETAT INITIAL STACK SEGMENT ===\n");
+    print_stack_segment(cpu);
 
     printf("=== ALLOCATION CODE SEGMENT ===\n");
     allocate_code_segment(cpu, pr->code_instructions, pr->code_count);
@@ -49,11 +57,15 @@ int main(void) {
     printf("=== INSTRUCTIONS AFTER RESOLVE ===\n");
     afficher_instructions(pr->code_instructions, pr->code_count);
 
-    printf("=== ALLOCATION STACK SEGMENT ===\n");
+    //print_free_list(cpu->memory_handler);
+    
+    //@todo: si on allue stack apres code ça donne erreur, donc il faut reflichir comment enlever
+
+    /*printf("=== ALLOCATION STACK SEGMENT ===\n");
     allocate_stack_segment(cpu);
 
     printf("=== ETAT INITIAL STACK SEGMENT ===\n");
-    print_stack_segment(cpu);
+    print_stack_segment(cpu);*/
 
 
     printf("=== RUN PROGRAMME ===\n");

@@ -86,8 +86,8 @@ int main(void) {
                 print_data_segment(cpu);
             }
             if (i == 2) {
-                void* val_src = memory_direct_addressing(cpu, "[AX]");
-                val_src = memory_direct_addressing(cpu, "[5]");
+                void* val_src = memory_direct_addressing(cpu, "[AX]", "MOV");
+                val_src = memory_direct_addressing(cpu, "[5]", "MOV");
                 handle_MOV(cpu, val_src, dest);
                 print_data_segment(cpu);
             }
@@ -100,7 +100,7 @@ int main(void) {
         }
     }
     
-    void* val_src = resolve_addressing(cpu, "888888");
+    void* val_src = resolve_addressing(cpu, "888888", "MOV");
     dest = get_safe_ds_cell(cpu, 8);
     if (dest != NULL) {
         handle_MOV(cpu, val_src, dest);

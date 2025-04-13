@@ -210,3 +210,23 @@ int getSegFreePos(MemoryHandler *handler, int size) {
     }
     return -1;
 }
+
+void print_free_list(MemoryHandler *handler) {
+    if (handler == NULL) {
+        printf("Erreur : MemoryHandler est NULL.\n");
+        return;
+    }
+
+    Segment *current = handler->free_list;
+
+    if (current == NULL) {
+        printf("La liste des segments libres est vide.\n");
+        return;
+    }
+
+    printf("=== Segments libres (free_list) ===\n");
+    while (current != NULL) {
+        printf("Segment libre: start = %d, size = %d\n", current->start, current->size);
+        current = current->next;
+    }
+}

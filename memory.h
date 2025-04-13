@@ -52,4 +52,6 @@ int remove_segment(MemoryHandler *handler, const char *name);
 void memory_destroy(MemoryHandler* handler);
 
 int getSegFreePos(MemoryHandler* handler, int size);
+void print_free_list(MemoryHandler *handler);   
+
 #endif

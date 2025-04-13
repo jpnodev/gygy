@@ -12,7 +12,7 @@ JZ equal
 MOV BX,x      
 JMP end
 
-equal:  POP CX        
+equal:  POP AX       
 MOV BX,z      
 
 end:    HALT

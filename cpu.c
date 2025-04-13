@@ -610,13 +610,11 @@ void handle_PUSH(CPU *cpu, void *src) {
 }
 
 void handle_POP(CPU *cpu, void *dest) {
-
     if (cpu == NULL) {
-        printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
+        printf("Erreur : argument invalide (cpu est NULL).\n");
         return;
     }
 
-    // Si la destination n'est pas précisée, on utilise le registre ax
     if (dest == NULL) {
         dest = hashmap_get(cpu->context, "AX");
         if (dest == NULL) {
@@ -625,11 +623,27 @@ void handle_POP(CPU *cpu, void *dest) {
         }
     }
 
-    int res = push_value(cpu, *(int *)dest);
-    if (res == -1) {
-        printf("Erreur : échec de l'empilement de la valeur.\n");
+    Segment *ss = hashmap_get(cpu->memory_handler->allocated, "SS");
+    int *sp = hashmap_get(cpu->context, "SP");
+
+    if (ss == NULL || sp == NULL) {
+        printf("Erreur : segment ou registre SP manquant.\n");
         return;
     }
+
+    if (*sp >= ss->start + ss->size) {
+        printf("Erreur : stack underflow\n");
+        return;
+    }
+
+    void *val = load(cpu->memory_handler, "SS", *sp - ss->start);
+    if (val == NULL) {
+        printf("Erreur : valeur introuvable dans la pile.\n");
+        return;
+    }
+
+    *(int *)dest = *(int *)val;
+    (*sp)++;  // снимаем вершину
 }
 
 int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
@@ -1148,7 +1162,7 @@ void allocate_stack_segment(CPU *cpu) {
     if (ss_candidat == NULL) {
         printf("Erreur : pas assez de mémoire pour le segment de pile.\n");
         return;
-    } else if (prev != ds) {
+    } else if (ss_candidat->start != ds->start + ds->size) {
         printf("Erreur : le segment de pile n'est pas adjacent au segment de données.\n");
         return;
     }
@@ -1183,26 +1197,31 @@ void print_stack_segment(CPU *cpu) {
     }
 
     printf("Contenu du segment de pile 'SS' (de %d à %d) :\n", ss->start, ss->start + ss->size - 1);
+    int count = 0;
     for (int i = 0; i < ss->size; i++) {
         int addr = ss->start + i;
         int *val = (int *)(cpu->memory_handler->memory[addr]);
 
-        printf("SS[%d] = ", i);
         if (val != NULL) {
-            printf("%d", *val);
-        } else {
-            printf("(vide)");
-        }
+            printf("SS[%d] = %d", i, *val);
 
-        if (addr == *sp) {
-            printf(" <-- SP");
+            if (addr == *sp) {
+                printf(" <-- SP");
+            }
+            if (addr == *bp) {
+                printf(" <-- BP");
+            }
+
+            printf("\n");
+            count++;
         }
-        if (addr == *bp) {
-            printf(" <-- BP");
-        }
-        printf("\n");
+    }
+
+    if (count == 0) {
+        printf("Pile vide (aucune case utilisée).\n");
     }
 }
+
 
 
 #pragma endregion

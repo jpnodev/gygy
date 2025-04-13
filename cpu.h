@@ -89,4 +89,5 @@ int run_program(CPU *cpu);
 void print_registres_et_drapeaux(CPU *cpu);
 void afficher_instructions(Instruction **liste, int count);
 void print_stack_segment(CPU *cpu);
+void allocate_stack_segment(CPU *cpu);
 #endif

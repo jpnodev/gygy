@@ -8,7 +8,6 @@
 
 #define MEMORY_SIZE 1024
 
-
 int main(void) {
     printf("=== INITIALISATION DU CPU ===\n");
     CPU *cpu = cpu_init(MEMORY_SIZE);
@@ -18,7 +17,7 @@ int main(void) {
     }
 
     printf("=== LECTURE FICHIER ===\n");
-    ParserResult *pr = parse("test_code_assembleur.txt");
+    ParserResult *pr = parse("test_cpu.txt");
     if (pr == NULL) {
         cpu_destroy(cpu);
         return -1;
