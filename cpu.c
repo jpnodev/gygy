@@ -548,10 +548,13 @@ void handle_JZ(CPU *cpu, void *adress) {
         printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
         return;
     }
+
     int *ZF = (int *)hashmap_get(cpu->context, "ZF");
-    intptr_t *IP = (intptr_t *)hashmap_get(cpu->context, "IP");
-    if (*ZF == 1) {
-        *IP = *(intptr_t *)adress;
+    int *IP = (int *)hashmap_get(cpu->context, "IP");
+    Segment *CS = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
+
+    if (*ZF == 1 && CS != NULL && IP != NULL) {
+        *IP = CS->start + *(int *)adress;  // <== добавляем смещение сегмента
     }
 }
 
@@ -799,6 +802,7 @@ int run_program(CPU *cpu) {
         }
 
         print_registres_et_drapeaux(cpu);
+        print_stack_segment(cpu);
     }
 
     printf("\n=== ÉTAT FINAL ===\n");
@@ -1157,5 +1161,48 @@ void allocate_stack_segment(CPU *cpu) {
     *sp = ds->start + ds->size - 1;
     *bp = ds->start + ds->size - 1;
 }
+
+void print_stack_segment(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : CPU est NULL.\n");
+        return;
+    }
+
+    Segment *ss = hashmap_get(cpu->memory_handler->allocated, "SS");
+    if (ss == NULL) {
+        printf("Erreur : segment de pile 'SS' introuvable.\n");
+        return;
+    }
+
+    int *sp = (int *)hashmap_get(cpu->context, "SP");
+    int *bp = (int *)hashmap_get(cpu->context, "BP");
+
+    if (sp == NULL || bp == NULL) {
+        printf("Erreur : registres SP ou BP introuvables.\n");
+        return;
+    }
+
+    printf("Contenu du segment de pile 'SS' (de %d à %d) :\n", ss->start, ss->start + ss->size - 1);
+    for (int i = 0; i < ss->size; i++) {
+        int addr = ss->start + i;
+        int *val = (int *)(cpu->memory_handler->memory[addr]);
+
+        printf("SS[%d] = ", i);
+        if (val != NULL) {
+            printf("%d", *val);
+        } else {
+            printf("(vide)");
+        }
+
+        if (addr == *sp) {
+            printf(" <-- SP");
+        }
+        if (addr == *bp) {
+            printf(" <-- BP");
+        }
+        printf("\n");
+    }
+}
+
 
 #pragma endregion

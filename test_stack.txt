@@ -1,0 +1,18 @@
+.DATA
+x DW 10
+y DW 5
+z DW 15
+
+.CODE
+start:  MOV AX,x       
+ADD AX,y      
+PUSH AX        
+CMP AX,z      
+JZ equal      
+MOV BX,x      
+JMP end
+
+equal:  POP CX        
+MOV BX,z      
+
+end:    HALT

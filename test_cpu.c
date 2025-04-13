@@ -18,7 +18,7 @@ int main(void) {
     }
 
     printf("=== LECTURE FICHIER ===\n");
-    ParserResult *pr = parse("filename.txt");
+    ParserResult *pr = parse("test_code_assembleur.txt");
     if (pr == NULL) {
         cpu_destroy(cpu);
         return -1;
