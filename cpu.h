@@ -50,7 +50,7 @@ void *store(MemoryHandler *handler, const char *segment_name, int pos, void *dat
 // En cas d’erreur, elle affiche un message explicatif et retourne NULL.
 // Sinon, elle retourne la donnée située à la position spécifiée dans le segment.
 void *load(MemoryHandler *handler, const char *segment_name, int pos);
-void allocate_variables(CPU *cpu, Instruction **data_instructions, int data_count, ParserResult* pr);
+void allocate_variables(CPU *cpu, Instruction **data_instructions, int data_count);
 int parserString(const char *str, int **tab);
 int parserStringVal(const char *str);
 // Cette fonction affiche le contenu du segment de données "DS" dans la mémoire du CPU.

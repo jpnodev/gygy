@@ -71,11 +71,8 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
         free(copy);
     }
 
-    int *address = (int *)malloc(sizeof(int));
-    *address = taille;
+    hashmap_insert(memory_locations, instruction->mnemonic,  (void *)(long)taille);
     taille += element_count;
-
-    //hashmap_insert(memory_locations, instruction->mnemonic, address);
 
     return instruction;
 }
@@ -111,15 +108,7 @@ Instruction *parse_code_instruction(const char *line, HashMap *memory_locations,
         char *token = strtok(line_copy, ":");
         strcpy(label, token);
 
-        int *address = (int *)malloc(sizeof(int));
-        if (address == NULL) {
-            perror("Erreur d'allocation de mémoire pour l'adresse");
-            free(instruction);
-            free(line_copy);
-            return NULL;
-        }
-        *address = code_count;
-        hashmap_insert(memory_locations, label, address);
+        hashmap_insert(memory_locations, label, (void *)(long)code_count);
 
         token = strtok(NULL, " ");
         if (token)

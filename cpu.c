@@ -261,8 +261,8 @@ int parserString(const char *str, int **tab) {
 }
 
 
-void allocate_variables(CPU *cpu, Instruction **data_instructions, int data_count, ParserResult* pr) {
-    if (cpu == NULL || data_instructions == NULL || data_count < 0 || pr == NULL) {
+void allocate_variables(CPU *cpu, Instruction **data_instructions, int data_count) {
+    if (cpu == NULL || data_instructions == NULL || data_count < 0) {
         printf("Erreur : argument invalide.\n");
         return;
     }
@@ -293,9 +293,9 @@ void allocate_variables(CPU *cpu, Instruction **data_instructions, int data_coun
                 continue;
             }
 
-            if (j == 0 && var_name != NULL) {
+            /*if (j == 0 && var_name != NULL) {
                 hashmap_insert(pr->memory_locations, var_name, (void *)(long)(current_index));
-            }
+            }*/
 
             current_index++;
         }
@@ -351,32 +351,36 @@ int search_and_replace(char **str, HashMap *values) {
     int replaced = 0;
     char *input = *str;
 
-    // Iterate through all keys in the hashmap
     for (int i = 0; i < values->size; i++) {
         if (values->table[i].key && values->table[i].key != (void *)-1) {
             char *key = values->table[i].key;
             int value = (int)(long)values->table[i].value;
 
-            // Find potential substring match
             char *substr = strstr(input, key);
             if (substr) {
-                // Construct replacement buffer
+                // 🔧 Замена: обернуть индекс в [ ... ]
                 char replacement[64];
-                snprintf(replacement, sizeof(replacement), "%d", value);
+                snprintf(replacement, sizeof(replacement), "[%d]", value);
 
-                // Calculate lengths
                 int key_len = strlen(key);
                 int repl_len = strlen(replacement);
+
+                // Вычисление длины оставшейся строки
                 int remain_len = strlen(substr + key_len);
 
-                // Create new string
+                // Новый буфер: старое - длина ключа + длина замены + \0
                 char *new_str = (char *)malloc(strlen(input) - key_len + repl_len + 1);
+                if (!new_str) {
+                    perror("Erreur malloc dans search_and_replace");
+                    return 0;
+                }
+
+                // Собираем новую строку
                 strncpy(new_str, input, substr - input);
                 new_str[substr - input] = '\0';
                 strcat(new_str, replacement);
                 strcat(new_str, substr + key_len);
 
-                // Free and update original string
                 free(input);
                 *str = new_str;
                 input = new_str;
@@ -386,7 +390,7 @@ int search_and_replace(char **str, HashMap *values) {
         }
     }
 
-    // Trim the final string
+    // Trim
     if (replaced) {
         char *trimmed = trim(input);
         if (trimmed != input) {
@@ -431,8 +435,7 @@ int resolve_constants(ParserResult *result) {
 
 void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_count) {
     if (cpu == NULL || code_instructions == NULL || code_count < 0) {
-        printf("Erreur : argument invalide (cpu ou code_instructions est "
-               "NULL).\n");
+        printf("Erreur : argument invalide (cpu ou code_instructions ou ParserResult est NULL).\n");
         return;
     }
 
@@ -449,7 +452,8 @@ void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_c
     }
 
     for (int i = 0; i < code_count; i++) {
-        if (store(cpu->memory_handler, "CS", i, code_instructions[i]) == NULL) {
+        Instruction *instr = code_instructions[i];
+        if (store(cpu->memory_handler, "CS", i, instr) == NULL) {
             printf("Erreur lors du stockage de l'instruction %d\n", i);
             remove_segment(cpu->memory_handler, "CS");
             return;
@@ -463,6 +467,7 @@ void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_c
         printf("Erreur : registre IP introuvable\n");
     }
 }
+
 
 void afficher_instructions(Instruction **liste, int count) {
     if (liste == NULL || count == 0) {
@@ -692,11 +697,13 @@ int execute_instruction(CPU *cpu, Instruction *instr) {
     void *dest = NULL;
 
     if (instr->operand1 != NULL) {
-        src = resolve_addressing(cpu, instr->operand1);
+        dest = resolve_addressing(cpu, instr->operand1);
+        printf("DEST: %d\n", *(int *)dest);
     }
 
     if (instr->operand2 != NULL) {
-        dest = resolve_addressing(cpu, instr->operand2);
+        src = resolve_addressing(cpu, instr->operand2);
+        printf("SRC: %d\n", *(int *)src);
     }
 
     return handle_instruction(cpu, instr, src, dest);
@@ -871,10 +878,8 @@ void *register_addressing(CPU *cpu, const char *operand) {
     cleaned[sizeof(cleaned) - 1] = '\0';
 
     char *op = trim(cleaned);
-    printf("🔍 operand reçu = '%s'\n", op);
 
     if (matches("^[ABCD]X$", op)) {
-        printf("Reconnu comme registre valide.\n");
         int *valeur = (int *)hashmap_get(cpu->context, op);
         if (valeur == NULL) {
             printf("Registre %s est vide ou non initialisé.\n", op);
@@ -959,30 +964,41 @@ void *resolve_addressing(CPU *cpu, const char *operand) {
     }
 
     void *result;
-    printf("%s", (operand));
 
     // On essaye d'abord l'adressage immédiat
     result = immediate_addressing(cpu, operand);
     if (result != NULL) {
+        printf("immediate_addressing %d\n", *(int *)result);
         return result;
+    } else {
+        printf("not immediate_addressing\n");
     }
 
     // Ensuite, on essaye l'adressage par registre
     result = register_addressing(cpu, operand);
     if (result != NULL) {
+        printf("register_addressing %d\n", *(int *)result);
         return result;
+    } else {
+        printf("not register_addressing\n");
     }
 
     // Adressage direct mémoire
     result = memory_direct_addressing(cpu, operand);
     if (result != NULL) {
+        printf("memory_direct_addressing %d\n", *(int *)result);
         return result;
+    } else {
+        printf("not memory_direct_addressing\n");
     }
 
     // Adressage indirect par registre
     result = register_indirect_addressing(cpu, operand);
     if (result != NULL) {
+        printf("register_indirect_addressing %d\n", *(int *)result);
         return result;
+    } else {
+        printf("not register_indirect_addressing\n");
     }
 
     // Aucun adressage n'a fonctionné

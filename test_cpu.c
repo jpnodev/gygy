@@ -25,7 +25,7 @@ int main(void) {
     }
 
     printf("=== ALLOCATION DATA SEGMENT ===\n");
-    allocate_variables(cpu, pr->data_instructions, pr->data_count, pr);
+    allocate_variables(cpu, pr->data_instructions, pr->data_count);
 
     printf("=== ETAT INITIAL ===\n");
     print_data_segment(cpu);
@@ -49,6 +49,9 @@ int main(void) {
 
     printf("=== INSTRUCTIONS AFTER RESOLVE ===\n");
     afficher_instructions(pr->code_instructions, pr->code_count);
+
+    printf("=== RUN PROGRAMME ===\n");
+    run_program(cpu);
 
 
 

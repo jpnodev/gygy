@@ -329,10 +329,8 @@ void *register_addressing(CPU *cpu, const char *operand) {
     cleaned[sizeof(cleaned) - 1] = '\0';
 
     char *op = trim(cleaned);
-    printf("🔍 operand reçu = '%s'\n", op);
 
     if (matches("^[ABCD]X$", op)) {
-        printf("Reconnu comme registre valide.\n");
         int *valeur = (int *)hashmap_get(cpu->context, op);
         if (valeur == NULL) {
             printf("Registre %s est vide ou non initialisé.\n", op);
