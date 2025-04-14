@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define SS_SIZE 128
+#define SS_SIZE 20
 
 // Cette structure pour simuler le travail du CPU. Un CPU est  composé
 // d’un gestionnaire de mémoire (MemoryHandler) permettant d’allouer
@@ -66,15 +66,15 @@ int search_and_replace(char **str, HashMap *values);
 int resolve_constants(ParserResult *result);
 void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_count);
 int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest);
-void handle_MOV(CPU *cpu, void *src, void *dest);
-void handle_ADD(CPU *cpu, void *src, void *dest);
-void handle_CMP(CPU *cpu, void *src, void *dest);
-void handle_JMP(CPU *cpu, void *adress);
-void handle_JZ(CPU *cpu, void *adress);
-void handle_JNZ(CPU *cpu, void *adress);
-void handle_HALT(CPU *cpu);
-void handle_PUSH(CPU *cpu, void *src);
-void handle_POP(CPU *cpu, void *dest);
+int handle_MOV(CPU *cpu, void *src, void *dest);
+int handle_ADD(CPU *cpu, void *src, void *dest);
+int handle_CMP(CPU *cpu, void *src, void *dest);
+int handle_JMP(CPU *cpu, void *adress);
+int handle_JZ(CPU *cpu, void *adress);
+int handle_JNZ(CPU *cpu, void *adress);
+int handle_HALT(CPU *cpu);
+int handle_PUSH(CPU *cpu, void *src);
+int handle_POP(CPU *cpu, void *dest);
 int execute_instruction(CPU *cpu, Instruction *instr);
 Instruction *fetch_next_instruction(CPU *cpu);
 int matches(const char *pattern, const char *string);

@@ -489,108 +489,145 @@ void afficher_instructions(Instruction **liste, int count) {
     }
 }
 
-void handle_MOV(CPU *cpu, void *src, void *dest) {
+int handle_MOV(CPU *cpu, void *src, void *dest) {
     if (cpu == NULL || src == NULL || dest == NULL) {
         printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
-        return;
+        return -1;
     }
 
     *(int *)dest = *(int *)src;
+    return 0;
 }
 
-void handle_ADD(CPU *cpu, void *src, void *dest) {
+int handle_ADD(CPU *cpu, void *src, void *dest) {
     if (cpu == NULL || src == NULL || dest == NULL) {
         printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
-        return;
+        return -1;
     }
     *(int *)dest = (*(int *)src) + (*(int *)dest);
+    return 0;
 }
 
-void handle_CMP(CPU *cpu, void *src, void *dest) {
+int handle_CMP(CPU *cpu, void *src, void *dest) {
     if (cpu == NULL || src == NULL || dest == NULL) {
         printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
-        return;
+        return -1;
     }
 
     int res = (*(int *)dest) - (*(int *)src);
 
     if (res == 0) {
         int *ZF = (int *)hashmap_get(cpu->context, "ZF");
+        if (ZF == NULL) {
+            printf("Drapeau ZF non trouvée\n");
+            return -1;
+        }
         *ZF = 1;
     } else if (res < 0) {
         int *SF = (int *)hashmap_get(cpu->context, "SF");
+        if (SF == NULL) {
+            printf("Drapeau SF non trouvée\n");
+            return -1;
+        }
         *SF = 1;
     }
+    return 0;
 }
 
-void handle_JMP(CPU *cpu, void *adress) {
-    if (cpu == NULL || adress == NULL) return;
+int handle_JMP(CPU *cpu, void *adress) {
+    if (cpu == NULL || adress == NULL) {
+        printf("Erreur : argument invalide.\n");
+        return -1;
+    }
 
     int *val = (int *)adress; 
 
     Segment *CS = hashmap_get(cpu->memory_handler->allocated, "CS");
     if (CS == NULL) {
         printf("Erreur : segment de code CS introuvable.\n");
-        return;
+        return -1;
     }
 
     int *IP = (int *)hashmap_get(cpu->context, "IP");
     if (IP == NULL) {
         printf("Erreur : registre IP introuvable.\n");
-        return;
+        return -1;
     }
 
     *IP = CS->start + *val;
+    return 0;
 }
 
-void handle_JZ(CPU *cpu, void *adress) {
+int handle_JZ(CPU *cpu, void *adress) {
     if (cpu == NULL || adress == NULL) {
         printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
-        return;
+        return -1;
     }
 
     int *ZF = (int *)hashmap_get(cpu->context, "ZF");
+    if (ZF == NULL) {
+        printf("Drapeau ZF non trouvée\n");
+        return -1;
+    }
     int *IP = (int *)hashmap_get(cpu->context, "IP");
+    if (IP == NULL) {
+        printf("Erreur : registre IP introuvable.\n");
+        return -1;
+    }
     Segment *CS = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
+    if (CS == NULL) {
+        printf("Erreur : segment de code CS introuvable.\n");
+        return -1;
+    }
 
     if (*ZF == 1 && CS != NULL && IP != NULL) {
         *IP = CS->start + *(int *)adress;  // <== добавляем смещение сегмента
     }
+    return 0;
 }
 
-void handle_JNZ(CPU *cpu, void *adress) {
+int handle_JNZ(CPU *cpu, void *adress) {
     if (cpu == NULL || adress == NULL) {
         printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
-        return;
+        return -1;
     }
     int *ZF = (int *)hashmap_get(cpu->context, "ZF");
-    intptr_t *IP = (intptr_t *)hashmap_get(cpu->context, "IP");
-    if (*ZF == 0) {
-        *IP = *(intptr_t *)adress;
+    if (ZF == NULL) {
+        printf("Drapeau ZF non trouvée\n");
+        return -1;
     }
+    int *IP = (int *)hashmap_get(cpu->context, "IP");
+    if (IP == NULL) {
+        printf("Erreur : registre IP introuvable.\n");
+        return -1;
+    }
+    if (*ZF == 0) {
+        *IP = *(int *)adress;
+    }
+    return 0;
 }
 
-void handle_HALT(CPU *cpu) {
+int handle_HALT(CPU *cpu) {
     if (cpu == NULL) {
         printf("Erreur : argument invalide (cpu est NULL).\n");
-        return;
+        return -1;
     }
 
     int *IP = (int *)hashmap_get(cpu->context, "IP");
     Segment *CS = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
     if (CS == NULL || IP == NULL) {
         printf("Erreur : segment de codes ou IP n'est pas initialisé.\n");
-        return;
+        return -1;
     }
 
     *IP = CS->start + CS->size;
+    return 0;
 }
 
-void handle_PUSH(CPU *cpu, void *src) {
-
+int handle_PUSH(CPU *cpu, void *src) {
     if (cpu == NULL) {
         printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
-        return;
+        return -1;
     }
 
     // Si la source n'est pas précisée, on utilise le registre ax
@@ -598,53 +635,39 @@ void handle_PUSH(CPU *cpu, void *src) {
         src = hashmap_get(cpu->context, "AX");
         if (src == NULL) {
             printf("Erreur : registre AX introuvable.\n");
-            return;
+            return -1;
         }
     }
 
     int res = push_value(cpu, *(int *)src);
     if (res == -1) {
         printf("Erreur : échec de l'empilement de la valeur.\n");
-        return;
+        return -1;
     }
+    return 0;
 }
 
-void handle_POP(CPU *cpu, void *dest) {
+int handle_POP(CPU *cpu, void *dest) {
     if (cpu == NULL) {
         printf("Erreur : argument invalide (cpu est NULL).\n");
-        return;
+        return -1;
     }
 
     if (dest == NULL) {
         dest = hashmap_get(cpu->context, "AX");
         if (dest == NULL) {
             printf("Erreur : registre AX introuvable.\n");
-            return;
+            return -1;
         }
     }
-
-    Segment *ss = hashmap_get(cpu->memory_handler->allocated, "SS");
-    int *sp = hashmap_get(cpu->context, "SP");
-
-    if (ss == NULL || sp == NULL) {
-        printf("Erreur : segment ou registre SP manquant.\n");
-        return;
+    int res = pop_value(cpu, (int *)dest);
+    if (res == -1) {
+        printf("Erreur : échec de l'empilement de la valeur.\n");
+        return -1;
     }
-
-    if (*sp >= ss->start + ss->size) {
-        printf("Erreur : stack underflow\n");
-        return;
-    }
-
-    void *val = load(cpu->memory_handler, "SS", *sp - ss->start);
-    if (val == NULL) {
-        printf("Erreur : valeur introuvable dans la pile.\n");
-        return;
-    }
-
-    *(int *)dest = *(int *)val;
-    (*sp)++;  // снимаем вершину
+    return 0;
 }
+
 
 int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
     if (cpu == NULL || instr == NULL) {
@@ -657,55 +680,55 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
             printf("Erreur : MOV nécessite deux arguments.\n");
             return -1;
         }
-        handle_MOV(cpu, src, dest);
+        return handle_MOV(cpu, src, dest);
 
     } else if (strncmp(instr->mnemonic, "ADD", 3) == 0) {
         if (src == NULL || dest == NULL) {
             printf("Erreur : ADD nécessite deux arguments.\n");
             return -1;
         }
-        handle_ADD(cpu, src, dest);
+        return handle_ADD(cpu, src, dest);
 
     } else if (strncmp(instr->mnemonic, "CMP", 3) == 0) {
         if (src == NULL || dest == NULL) {
             printf("Erreur : CMP nécessite deux arguments.\n");
             return -1;
         }
-        handle_CMP(cpu, src, dest);
+        return handle_CMP(cpu, src, dest);
 
     } else if (strncmp(instr->mnemonic, "JMP", 3) == 0) {
         if (src == NULL) {
             printf("Erreur : JMP nécessite une adresse (src).\n");
             return -1;
         }
-        handle_JMP(cpu, src);
+        return handle_JMP(cpu, src);
 
     } else if (strncmp(instr->mnemonic, "JZ", 2) == 0) {
         if (src == NULL) {
             printf("Erreur : JZ nécessite une adresse (src).\n");
             return -1;
         }
-        handle_JZ(cpu, src);
+        return handle_JZ(cpu, src);
 
     } else if (strncmp(instr->mnemonic, "JNZ", 3) == 0) {
         if (src == NULL) {
             printf("Erreur : JNZ nécessite une adresse (src).\n");
             return -1;
         }
-        handle_JNZ(cpu, src);
+        return handle_JNZ(cpu, src);
 
     } else if (strncmp(instr->mnemonic, "HALT", 4) == 0) {
-        handle_HALT(cpu);
+        return handle_HALT(cpu);
 
     } else if (strncmp(instr->mnemonic, "PUSH", 4) == 0) {
         // Ici, src (operand 1) est la source à empiler
         // dest (operand 2) n'est pas utilisé
-        handle_PUSH(cpu, src);
+        return handle_PUSH(cpu, src);
 
     } else if (strncmp(instr->mnemonic, "POP", 3) == 0) {
         // Ici, src (operand 1) est la destination où la valeur sera dépilée
         // dest (operand 2) n'est pas utilisé
-        handle_POP(cpu, src);
+        return handle_POP(cpu, src);
 
     } else {
         printf("Erreur : instruction \"%s\" non reconnue.\n", instr->mnemonic);
@@ -772,7 +795,7 @@ Instruction *fetch_next_instruction(CPU *cpu) {
         return NULL;
     }
 
-    printf("IP: %d\n", *IP);
+    //printf("IP: %d\n", *IP);
 
     Instruction *instr = (Instruction *)(cpu->memory_handler->memory[*IP]);
     (*IP)++;
@@ -810,7 +833,10 @@ int run_program(CPU *cpu) {
             break;
         }
 
-        if (execute_instruction(cpu, inst) == -1) {
+        int r = execute_instruction(cpu, inst);
+        //printf("RESULT: %d", r);
+
+        if (r == -1) {
             printf("Erreur lors de l'exécution de l'instruction.\n");
             break;
         }
@@ -1029,12 +1055,14 @@ int push_value(CPU *cpu, int value) {
         printf("Erreur : segment de pile introuvable.\n");
         return -1;
     }
+    printf("SS start: %d\n", ss->start);
 
     int *sp = (int *)hashmap_get(cpu->context, "SP");
     if (sp == NULL) {
         printf("Erreur : registre SP introuvable.\n");
         return -1;
     }
+    printf("SP : %d\n", *sp);
 
     if (*sp - 1 < ss->start) {
         printf("Erreur : stack overflow\n");
@@ -1066,7 +1094,7 @@ int push_value(CPU *cpu, int value) {
 
     *valeur = value;
 
-    //@todo peut etre pas bonne méthode et pas besoint de malloc ? on verra à la fin
+    //@todo peut etre pas bonne méthode et pas besoin de malloc ? on verra à la fin
     // on insère la valeur dans la mémoire du cpu
     *sp -= 1;
     if (store(cpu->memory_handler, "SS", *sp - ss->start, valeur) == NULL) {
@@ -1079,9 +1107,6 @@ int push_value(CPU *cpu, int value) {
 }
 
 int pop_value(CPU *cpu, int *dest) {
-
-    static int stack_is_empty = 1;
-
     if (cpu == NULL) {
         printf("Erreur : argument invalide (cpu est NULL).\n");
         return -1;
@@ -1093,47 +1118,49 @@ int pop_value(CPU *cpu, int *dest) {
         return -1;
     }
 
-    int *sp = (int *)hashmap_get(cpu->context, "SP");
+    int *sp = hashmap_get(cpu->context, "SP");
     if (sp == NULL) {
         printf("Erreur : registre SP introuvable.\n");
         return -1;
     }
 
-    // On vérifie si la pile est vide
-    if (stack_is_empty) {
+    // Vérifie que la pile n'est pas vide
+    if (*sp >= ss->start + ss->size) {
         printf("Erreur : stack underflow\n");
         return -1;
     }
 
-    // On cherche la valeur dans constant pool
-    int *valeur = (int *)load(cpu->memory_handler, "SS", *sp - ss->start);
+    // Récupération
+    int abs_index = *sp;
+    int *valeur = load(cpu->memory_handler, "SS", abs_index - ss->start);
     if (valeur == NULL) {
-        printf("Erreur : échec de la récupération de la valeur dans le segment de pile.\n");
+        printf("Erreur : échec de la récupération de la valeur.\n");
         return -1;
     }
 
-    // On la copie dans le registre de destination
-    // Si la destination est NULL, on prend le registre ax par défaut
+    // Stockage dans le registre
     if (dest == NULL) {
-        dest = (int *)hashmap_get(cpu->context, "AX");
+        dest = hashmap_get(cpu->context, "AX");
         if (dest == NULL) {
             printf("Erreur : registre AX introuvable.\n");
             return -1;
         }
     }
 
-    *(int *)dest = *valeur;
+    *dest = *valeur;
 
-    // On vérifie si la liste est vide
-    if (*sp == ss->start) {
-        stack_is_empty = 1;
-    } else {
-        stack_is_empty = 0;
-        *sp += 1;
-    }
+    // Libération
+    //@todo verifier est-ce que il a ete alloué
+    free(cpu->memory_handler->memory[abs_index]);
+    cpu->memory_handler->memory[abs_index] = NULL;
+
+    // Incrémenter SP
+    *sp += 1;
 
     return 0;
 }
+
+
 
 void allocate_stack_segment(CPU *cpu) {
     if (cpu == NULL) {
@@ -1172,8 +1199,9 @@ void allocate_stack_segment(CPU *cpu) {
         printf("Erreur : le stack segment n'est pas initialisé\n");
     }
 
-    *sp = ds->start + ds->size - 1;
-    *bp = ds->start + ds->size - 1;
+   *sp = ds->start + ds->size + SS_SIZE;  
+   *bp = ds->start + ds->size + SS_SIZE;
+   printf("SP: %d\n", *sp);
 }
 
 void print_stack_segment(CPU *cpu) {

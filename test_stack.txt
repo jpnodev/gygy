@@ -6,7 +6,9 @@ z DW 15
 .CODE
 start:  MOV AX,x       
 ADD AX,y      
-PUSH AX        
+PUSH AX 
+PUSH AX
+PUSH AX 
 CMP AX,z      
 JZ equal      
 MOV BX,x      
