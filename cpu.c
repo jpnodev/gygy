@@ -728,7 +728,7 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
     } else if (strncmp(instr->mnemonic, "POP", 3) == 0) {
         // Ici, src (operand 1) est la destination où la valeur sera dépilée
         // dest (operand 2) n'est pas utilisé
-        return handle_POP(cpu, src);
+        return handle_POP(cpu, src);  
 
     } else {
         printf("Erreur : instruction \"%s\" non reconnue.\n", instr->mnemonic);
@@ -1249,7 +1249,5 @@ void print_stack_segment(CPU *cpu) {
         printf("Pile vide (aucune case utilisée).\n");
     }
 }
-
-
 
 #pragma endregion

@@ -1042,27 +1042,27 @@ void handle_POP(CPU *cpu, void *dest) {
     }
 }
 
-void handle_ALLOC(CPU *cpu) {
+int handle_ALLOC(CPU *cpu) {
     if (cpu == NULL) {
         printf("Erreur : argument invalide (cpu est NULL).\n");
-        return;
+        return -1;
     }
     int res = alloc_es_segment(cpu);
     if (res == -1) {
         printf("Erreur : échec de l'allocation du segment ES.\n");
-        return;
+        return -1;
     }
 }
 
-void handle_FREE(CPU *cpu) {
+int handle_FREE(CPU *cpu) {
     if (cpu == NULL) {
         printf("Erreur : argument invalide (cpu est NULL).\n");
-        return;
+        return -1;
     }
     int res = free_es_segment(cpu);
     if (res == -1) {
         printf("Erreur : échec de la libération du segment ES.\n");
-        return;
+        return -1;
     }
 }
 
