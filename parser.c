@@ -10,8 +10,8 @@ ParserResult *init() {
     pr->data_count = 0;
     pr->code_instructions = NULL;
     pr->code_count = 0;
-    pr->labels = hashmap_create(BASIC_MALLOC);
-    pr->memory_locations = hashmap_create(BASIC_MALLOC);
+    pr->labels = hashmap_create(SIMPLE);
+    pr->memory_locations = hashmap_create(SIMPLE);
 
     return pr;
 }
@@ -71,14 +71,14 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
         free(copy);
     }
 
-    hashmap_insert(memory_locations, instruction->mnemonic,  (void *)(long)taille);
+    hashmap_insert(memory_locations, instruction->mnemonic, (void *)(long)taille);
     taille += element_count;
 
     return instruction;
 }
 
-Instruction *parse_code_instruction(const char *line, HashMap *memory_locations, int code_count) {
-    if (line == NULL || memory_locations == NULL) {
+Instruction *parse_code_instruction(const char *line, HashMap *labels, int code_count) {
+    if (line == NULL || labels == NULL) {
         perror("Instruction ne peut pas être lue");
         return NULL;
     }
@@ -108,7 +108,8 @@ Instruction *parse_code_instruction(const char *line, HashMap *memory_locations,
         char *token = strtok(line_copy, ":");
         strcpy(label, token);
 
-        hashmap_insert(memory_locations, label, (void *)(long)code_count);
+        //@todo on devrait plutot insérer dans label
+        hashmap_insert(labels, label, (void *)(long)code_count);
 
         token = strtok(NULL, " ");
         if (token)
@@ -253,7 +254,10 @@ void free_parser_result(ParserResult *result) {
     }
     free(result->code_instructions);
 
+    // printf("libération labels\n");
     hashmap_destroy(result->labels);
+
+    // printf("libération memory_locations\n");
     hashmap_destroy(result->memory_locations);
 
     free(result);

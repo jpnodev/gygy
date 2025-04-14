@@ -10,7 +10,7 @@
 #define MEMORY_SIZE 1024
 
 int main(void) {
-    ParserResult *pr = parse("filename.txt");
+    ParserResult *pr = parse("test_parser.txt");
     if (pr == NULL) {
         perror("Erreur!\n");
         return -1;

@@ -3,7 +3,6 @@
 
 #include "memory.h"
 #include "parser.h"
-#include "debug.h"
 #include <regex.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -23,7 +22,8 @@ typedef struct {
     HashMap *constant_pool;
 } CPU;
 
-// Cette fonction initialise une structure CPU.
+// Cette fonction initialise un objet CPU avec une mémoire de taille donnée.
+// Elle retourne un pointeur vers le CPU initialisé ou NULL en cas d'échec.
 CPU *cpu_init(int memory_size);
 // Cette fonction libère toute la mémoire associée à une structure CPU.
 void cpu_destroy(CPU *cpu);
@@ -58,9 +58,6 @@ int parserStringVal(const char *str);
 // Ensuite, elle parcourt chaque cellule du segment et affiche la valeur entière stockée.
 // Si le segment "DS" n'existe pas, elle affiche un message d'erreur.
 void print_data_segment(CPU *cpu);
-// Cette fonction initialise un objet CPU avec une mémoire de taille donnée.
-// Elle retourne un pointeur vers le CPU initialisé ou NULL en cas d'échec.
-CPU *init_CPU(int size);
 char *trim(char *str);
 int search_and_replace(char **str, HashMap *values);
 int resolve_constants(ParserResult *result);
@@ -88,6 +85,9 @@ int pop_value(CPU *cpu, int *dest);
 int run_program(CPU *cpu);
 void print_registres_et_drapeaux(CPU *cpu);
 void afficher_instructions(Instruction **liste, int count);
-void print_stack_segment(CPU *cpu);
 void allocate_stack_segment(CPU *cpu);
+void *segment_override_addressing(CPU *cpu, const char *operand);
+int find_free_address_strategy(MemoryHandler *handler, int size, int strategy);
+int alloc_es_segment(CPU *cpu);
+int free_es_segment(CPU *cpu);
 #endif

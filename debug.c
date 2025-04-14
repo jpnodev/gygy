@@ -1,4 +1,4 @@
-#include "debug.h"
+#include "cpu.h"
 
 void display_hashentry(HashEntry *entry) {
     if (entry == NULL) {
@@ -110,4 +110,50 @@ void display_instructions(Instruction **liste, int count) {
         }
     }
     printf("\n");
+}
+
+void display_stack_segment(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : CPU est NULL.\n");
+        return;
+    }
+
+    Segment *ss = hashmap_get(cpu->memory_handler->allocated, "SS");
+    if (ss == NULL) {
+        printf("Erreur : segment de pile 'SS' introuvable.\n");
+        return;
+    }
+
+    int *sp = (int *)hashmap_get(cpu->context, "SP");
+    int *bp = (int *)hashmap_get(cpu->context, "BP");
+
+    if (sp == NULL || bp == NULL) {
+        printf("Erreur : registres SP ou BP introuvables.\n");
+        return;
+    }
+
+    printf("Contenu du segment de pile 'SS' (de %d à %d) :\n", ss->start, ss->start + ss->size - 1);
+    int count = 0;
+    for (int i = 0; i < ss->size; i++) {
+        int addr = ss->start + i;
+        int *val = (int *)(cpu->memory_handler->memory[addr]);
+
+        if (val != NULL) {
+            printf("SS[%d] = %d", i, *val);
+
+            if (addr == *sp) {
+                printf(" <-- SP");
+            }
+            if (addr == *bp) {
+                printf(" <-- BP");
+            }
+
+            printf("\n");
+            count++;
+        }
+    }
+
+    if (count == 0) {
+        printf("Pile vide (aucune case utilisée).\n");
+    }
 }

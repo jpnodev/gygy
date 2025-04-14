@@ -1,6 +1,7 @@
 #ifndef debug
 #define debug
 
+#include "cpu.h"
 #include "hachage.h"
 #include "memory.h"
 #include "parser.h"
@@ -20,4 +21,5 @@ void display_memory(MemoryHandler *mem);
 // Sinon, elle parcourt chaque instruction et affiche son mnémonique, son opérande 1,
 // et son opérande 2 (si ce dernier existe), en les encadrant de guillemets.
 void display_instructions(Instruction **liste, int count);
+void display_stack_segment(CPU *cpu);
 #endif

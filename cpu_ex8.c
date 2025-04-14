@@ -67,7 +67,7 @@ CPU *cpu_init(int memory_size) {
         return NULL;
     }
 
-    // Initialiser les registres à 0
+    // Initialiser les registres
     *ax = 0;
     *bx = 0;
     *cx = 0;
@@ -744,7 +744,7 @@ int push_value(CPU *cpu, int value) {
 
     *valeur = value;
 
-    //@todo peut etre pas bonne méthode et pas besoint de malloc ? on verra à la fin
+    //@todo peut etre pas bonne méthode et pas besoin de malloc ? on verra à la fin
     // on insère la valeur dans la mémoire du cpu
     *sp -= 1;
     if (store(cpu->memory_handler, "SS", *sp - ss->start, valeur) == NULL) {
@@ -777,7 +777,7 @@ int pop_value(CPU *cpu, int *dest) {
         return -1;
     }
 
-    // On vérifie si la pile est vide
+    // On vérifie que la pile n'est pas vide
     if (stack_is_empty) {
         printf("Erreur : stack underflow\n");
         return -1;

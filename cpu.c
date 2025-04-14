@@ -34,9 +34,10 @@ CPU *cpu_init(int memory_size) {
     int *sf = malloc(sizeof(int));
     int *sp = malloc(sizeof(int));
     int *bp = malloc(sizeof(int));
+    int *es = malloc(sizeof(int));
 
     if (ax == NULL || bx == NULL || cx == NULL || dx == NULL || ip == NULL || zf == NULL || sf == NULL || sp == NULL ||
-        bp == NULL) {
+        bp == NULL || es == NULL) {
         printf("Erreur : échec de l'allocation de mémoire pour les registres.\n");
         // Libérer la mémoire allouée pour les registres
         if (ax != NULL)
@@ -57,6 +58,8 @@ CPU *cpu_init(int memory_size) {
             free(sp);
         if (bp != NULL)
             free(bp);
+        if (es != NULL)
+            free(es);
         // Libérer la mémoire allouée pour le memory_handler
         memory_destroy(cpu->memory_handler);
         // Libérer la mémoire allouée pour le CPU
@@ -64,7 +67,7 @@ CPU *cpu_init(int memory_size) {
         return NULL;
     }
 
-    // Initialiser les registres à 0
+    // Initialiser les registres
     *ax = 0;
     *bx = 0;
     *cx = 0;
@@ -74,6 +77,7 @@ CPU *cpu_init(int memory_size) {
     *sf = 0;
     *sp = 0;
     *bp = 0;
+    *es = -1;
 
     // Initialiser la table de hachage pour le contexte
     cpu->context = hashmap_create(BASIC_MALLOC);
@@ -89,6 +93,7 @@ CPU *cpu_init(int memory_size) {
         free(sf);
         free(sp);
         free(bp);
+        free(es);
         // Libérer la mémoire allouée pour le memory_handler
         memory_destroy(cpu->memory_handler);
         // Libérer la mémoire allouée pour le CPU
@@ -101,7 +106,7 @@ CPU *cpu_init(int memory_size) {
         hashmap_insert(cpu->context, "CX", cx) == -1 || hashmap_insert(cpu->context, "DX", dx) == -1 ||
         hashmap_insert(cpu->context, "IP", ip) == -1 || hashmap_insert(cpu->context, "ZF", zf) == -1 ||
         hashmap_insert(cpu->context, "SF", sf) == -1 || hashmap_insert(cpu->context, "SP", sp) == -1 ||
-        hashmap_insert(cpu->context, "BP", bp) == -1) {
+        hashmap_insert(cpu->context, "BP", bp) == -1 || hashmap_insert(cpu->context, "ES", es) == -1) {
         printf("Erreur : échec de l'insertion des registres dans la table de hachage.\n");
         // Libérer la mémoire allouée pour les registres
         free(ax);
@@ -113,6 +118,7 @@ CPU *cpu_init(int memory_size) {
         free(sf);
         free(sp);
         free(bp);
+        free(es);
         // Libérer la mémoire allouée pour le memory_handler
         memory_destroy(cpu->memory_handler);
         // Libérer la mémoire allouée pour le contexte
@@ -136,6 +142,7 @@ CPU *cpu_init(int memory_size) {
         free(sf);
         free(sp);
         free(bp);
+        free(es);
         // Libérer la mémoire allouée pour le memory_handler
         memory_destroy(cpu->memory_handler);
         // Libérer la mémoire allouée pour le contexte
@@ -167,169 +174,6 @@ void cpu_destroy(CPU *cpu) {
 
 #pragma endregion
 
-#pragma region DATA
-
-void *store(MemoryHandler *handler, const char *segment_name, int pos, void *data) {
-    if (segment_name == NULL || handler == NULL || data == NULL) {
-        printf("Erreur : argument invalide (segment_name, handler ou data est NULL).\n");
-        return NULL;
-    }
-
-    Segment *s = hashmap_get(handler->allocated, segment_name);
-    if (s == NULL) {
-        printf("Erreur : segment \"%s\" introuvable dans la mémoire allouée.\n", segment_name);
-        return NULL;
-    }
-
-    if (pos < 0 || pos >= s->size) {
-        printf("Erreur : position %d est hors des bornes du segment \"%s\" "
-               "(taille "
-               "%d).\n",
-               pos, segment_name, s->size);
-        return NULL;
-    }
-
-    // Vérifier si la mémoire est déjà allouée
-    // @todo si on n'empeche pas d'écrire sur une cases non vide, on ne pourra pas libérer la mémoire de l'ancienne
-    // valeur.
-    // @todo on pourrait faire un free avant de réécrire ???
-    if (handler->memory[s->start + pos] != NULL) {
-        printf("Erreur : la mémoire à la position %d du segment \"%s\" est déjà allouée.\n", pos, segment_name);
-        return NULL;
-    }
-
-    // Allouer la mémoire pour la nouvelle valeur
-    hashmap_insert(handler->allocated, segment_name, data);
-    handler->memory[s->start + pos] = data;
-    return handler->memory[s->start + pos];
-}
-
-void *load(MemoryHandler *handler, const char *segment_name, int pos) {
-    if (segment_name == NULL || handler == NULL) {
-        printf("Erreur : argument invalide (segment_name ou handler est NULL).\n");
-        return NULL;
-    }
-    Segment *s = hashmap_get(handler->allocated, segment_name);
-    if (s == NULL) {
-        printf("Erreur : segment \"%s\" introuvable dans la mémoire allouée.\n", segment_name);
-        return NULL;
-    }
-    if (pos < 0 || pos >= s->size) {
-        printf("Erreur : position %d est hors des bornes du segment \"%s\" "
-               "(taille "
-               "%d).\n",
-               pos, segment_name, s->size);
-        return NULL;
-    }
-
-    return handler->memory[s->start + pos];
-}
-
-int parserStringVal(const char *str) {
-    if (str == NULL) return 0;
-
-    int count = 1;
-    for (int i = 0; str[i]; i++) {
-        if (str[i] == ',') count++;
-    }
-    return count;
-}
-
-int parserString(const char *str, int **tab) {
-    if (str == NULL || tab == NULL) return 0;
-
-    int count = parserStringVal(str);
-    *tab = malloc(sizeof(int) * count);
-    if (*tab == NULL) {
-        printf("Erreur d'allocation mémoire dans parserString\n");
-        return 0;
-    }
-
-    char *copy = strdup(str);
-    if (copy == NULL) return 0;
-
-    char *token = strtok(copy, ",");
-    int index = 0;
-
-    while (token != NULL && index < count) {
-        (*tab)[index++] = atoi(token);
-        token = strtok(NULL, ",");
-    }
-
-    free(copy);
-    return count;
-}
-
-
-void allocate_variables(CPU *cpu, Instruction **data_instructions, int data_count) {
-    if (cpu == NULL || data_instructions == NULL || data_count < 0) {
-        printf("Erreur : argument invalide.\n");
-        return;
-    }
-
-    int total_values = 0;
-
-    for (int i = 0; i < data_count; i++) {
-        total_values += parserStringVal(data_instructions[i]->operand2);
-    }
-
-    int pos = getSegFreePos(cpu->memory_handler, total_values);
-    create_segment(cpu->memory_handler, "DS", pos, total_values);
-
-    int current_index = 0;
-
-    for (int i = 0; i < data_count; i++) {
-        int *values;
-        int count = parserString(data_instructions[i]->operand2, &values);
-        const char *var_name = data_instructions[i]->mnemonic;
-
-        for (int j = 0; j < count; j++) {
-            int *val = malloc(sizeof(int));
-            *val = values[j];
-
-            if (store(cpu->memory_handler, "DS", current_index, val) == NULL) {
-                printf("Erreur de stockage à l'index %d\n", current_index);
-                free(val);
-                continue;
-            }
-
-            /*if (j == 0 && var_name != NULL) {
-                hashmap_insert(pr->memory_locations, var_name, (void *)(long)(current_index));
-            }*/
-
-            current_index++;
-        }
-
-        free(values);
-    }
-}
-
-void print_data_segment(CPU *cpu) {
-    if (cpu == NULL)
-        return;
-
-    Segment *s = hashmap_get(cpu->memory_handler->allocated, "DS");
-    if (s == NULL) {
-        printf("Pas de segment 'DS' dans la mémoire.\n");
-        return;
-    }
-
-    printf("Contenu du segment de données 'DS' :\n");
-    for (int i = 0; i < s->size; i++) {
-        int index = s->start + i;
-        int *valeur = (int *)(cpu->memory_handler->memory[index]);
-
-        if (valeur != NULL) {
-
-            printf("DS[%d] = %d\n", i, *valeur);
-        } else {
-            printf("DS[%d] = (vide)\n", i);
-        }
-    }
-}
-
-#pragma endregion
-
 #pragma region Constants
 
 char *trim(char *str) {
@@ -351,31 +195,34 @@ int search_and_replace(char **str, HashMap *values) {
     int replaced = 0;
     char *input = *str;
 
+    // Iterate through all keys in the hashmap
     for (int i = 0; i < values->size; i++) {
         if (values->table[i].key && values->table[i].key != (void *)-1) {
             char *key = values->table[i].key;
             int value = (int)(long)values->table[i].value;
 
+            // Find potential substring match
             char *substr = strstr(input, key);
             if (substr) {
-                // 🔧 Замена: обернуть индекс в [ ... ]
+                // Construct replacement buffer
                 char replacement[64];
+                // Fonction de base sans les []
+                // snprintf(replacement, sizeof(replacement), "%d", value);
                 snprintf(replacement, sizeof(replacement), "[%d]", value);
 
                 int key_len = strlen(key);
                 int repl_len = strlen(replacement);
-
-                // Вычисление длины оставшейся строки
                 int remain_len = strlen(substr + key_len);
 
-                // Новый буфер: старое - длина ключа + длина замены + \0
+                // Create new string
                 char *new_str = (char *)malloc(strlen(input) - key_len + repl_len + 1);
+
+                // Ajout d'un test pour malloc
                 if (!new_str) {
                     perror("Erreur malloc dans search_and_replace");
                     return 0;
                 }
 
-                // Собираем новую строку
                 strncpy(new_str, input, substr - input);
                 new_str[substr - input] = '\0';
                 strcat(new_str, replacement);
@@ -420,7 +267,8 @@ int resolve_constants(ParserResult *result) {
         if (instr->operand1) {
             search_and_replace(&(instr->operand1), result->memory_locations);
             search_and_replace(&(instr->operand1), result->labels);
-        } if (instr->operand2) {
+        }
+        if (instr->operand2) {
             search_and_replace(&(instr->operand2), result->memory_locations);
             search_and_replace(&(instr->operand2), result->labels);
         }
@@ -431,7 +279,563 @@ int resolve_constants(ParserResult *result) {
 
 #pragma endregion
 
-#pragma region CODE
+#pragma region Adressing
+
+int matches(const char *pattern, const char *string) {
+    regex_t regex;
+    int result = regcomp(&regex, pattern, REG_EXTENDED);
+    if (result) {
+        fprintf(stderr, "Regex compilation failed for pattern: %s\n", pattern);
+        return 0;
+    }
+    result = regexec(&regex, string, 0, NULL, 0);
+    regfree(&regex);
+    return result == 0;
+}
+
+void *immediate_addressing(CPU *cpu, const char *operand) {
+    if (cpu == NULL || operand == NULL) {
+        printf("Erreur : argument invalide (cpu ou operand est NULL).\n");
+        return NULL;
+    }
+
+    char cleaned[32];
+    strncpy(cleaned, operand, sizeof(cleaned) - 1);
+    cleaned[sizeof(cleaned) - 1] = '\0';
+    char *op = trim(cleaned);
+
+    if (matches("^-?[0-9]+$", op)) {
+        int *valeur = (int *)hashmap_get(cpu->constant_pool, op);
+        if (valeur == NULL) {
+            valeur = (int *)malloc(sizeof(int));
+            if (valeur == NULL) {
+                perror("Erreur d'allocation pour valeur");
+                return NULL;
+            }
+
+            char *endptr;
+            *valeur = (int)strtol(op, &endptr, 10);
+            if (*endptr != '\0') {
+                printf("Erreur : operand n'est pas un entier valide : %s\n", op);
+                free(valeur);
+                return NULL;
+            }
+
+            hashmap_insert(cpu->constant_pool, op, valeur);
+        }
+        return valeur;
+    }
+    // printf("Ce n'est pas un adressage immédiat : %s\n", op);
+    return NULL;
+}
+
+void *register_addressing(CPU *cpu, const char *operand) {
+    if (cpu == NULL || operand == NULL) {
+        printf("Erreur : argument invalide (cpu ou operand est NULL).\n");
+        return NULL;
+    }
+
+    char cleaned[32];
+    strncpy(cleaned, operand, sizeof(cleaned) - 1);
+    cleaned[sizeof(cleaned) - 1] = '\0';
+
+    char *op = trim(cleaned);
+
+    if (matches("^[ABCD]X$", op)) {
+        int *valeur = (int *)hashmap_get(cpu->context, op);
+        if (valeur == NULL) {
+            printf("Registre %s est vide ou non initialisé.\n", op);
+            return NULL;
+        }
+        return valeur;
+    }
+
+    // printf("Ce n'est pas un adressage par régistre : %s\n", op);
+    return NULL;
+}
+
+void *memory_direct_addressing(CPU *cpu, const char *operand, const char *mnemonic) {
+    if (cpu == NULL || operand == NULL || mnemonic == NULL)
+        return NULL;
+
+    char cleaned[32];
+    strncpy(cleaned, operand, sizeof(cleaned) - 1);
+    cleaned[sizeof(cleaned) - 1] = '\0';
+    char *op = trim(cleaned);
+
+    if (matches("^\\[-?[0-9]+\\]$", op)) {
+        int address;
+        if (sscanf(op, "[%d]", &address) != 1) {
+            printf("Erreur : extraction de l'adresse a échoué : %s\n", op);
+            return NULL;
+        }
+
+        const char *segment =
+            (strncmp(mnemonic, "JMP", 3) == 0 || strncmp(mnemonic, "JZ", 2) == 0 || strncmp(mnemonic, "JNZ", 3) == 0)
+                ? "CS"
+                : "DS";
+        Segment *seg = hashmap_get(cpu->memory_handler->allocated, segment);
+        if (!seg)
+            return NULL;
+
+        if (address < 0 || address >= seg->size)
+            return NULL;
+
+        // 👇 вместо возврата указателя на инструкцию
+        if (strncmp(mnemonic, "JMP", 3) == 0 || strncmp(mnemonic, "JZ", 2) == 0 || strncmp(mnemonic, "JNZ", 3) == 0) {
+            int *val = malloc(sizeof(int));
+            *val = address; // вернуть индекс, не адрес памяти
+            return val;
+        }
+
+        return cpu->memory_handler->memory[seg->start + address];
+    }
+
+    return NULL;
+}
+
+void *register_indirect_addressing(CPU *cpu, const char *operand) {
+    if (cpu == NULL || operand == NULL) {
+        printf("Erreur : argument invalide (cpu ou operand est NULL).\n");
+        return NULL;
+    }
+
+    char cleaned[32];
+    strncpy(cleaned, operand, sizeof(cleaned) - 1);
+    cleaned[sizeof(cleaned) - 1] = '\0';
+    char *trimmed = trim(cleaned);
+
+    if (matches("^\\[(A|B|C|D)X\\]$", trimmed)) {
+        char registre[10];
+        size_t len = strlen(trimmed);
+        if (len < 4) {
+            printf("Erreur : nom de registre invalide.\n");
+            return NULL;
+        }
+        strncpy(registre, trimmed + 1, len - 2);
+        registre[len - 2] = '\0';
+        return register_addressing(cpu, registre);
+    }
+    // printf("Cette commande n'est pas un adressage indirect par registre : %s\n", operand);
+    return NULL;
+}
+
+void *segment_override_addressing(CPU *cpu, const char *operand) {
+    if (cpu == NULL || operand == NULL) {
+        printf("Erreur : argument invalide (cpu ou operand est NULL).\n");
+        return NULL;
+    }
+
+    // Valider le format d'adressage avec une expression régulière
+    if (!matches("^\\[(DS|CS|SS|ES):(AX|BX|CX|DX)\\]$", operand)) {
+        printf("Erreur : format d'adressage invalide : %s\n", operand);
+        return NULL;
+    }
+
+    // Extraire le segment et le registre correspondants
+    char segment[3] = "  \n";
+    char registre[3] = "  \n";
+    if (sscanf(operand, "[%2s:%2s]", segment, registre) != 2) {
+        printf("Erreur : extraction du segment et du registre a échoué : %s\n", operand);
+        return NULL;
+    }
+
+    // Récupérer le registre
+    int *registre_val = (int *)hashmap_get(cpu->context, registre);
+    if (registre_val == NULL) {
+        printf("Erreur : registre %s introuvable ou non initialisé.\n", registre);
+        return NULL;
+    }
+
+    // Récupérer le segment
+    Segment *seg = (Segment *)hashmap_get(cpu->memory_handler->allocated, segment);
+    if (seg == NULL) {
+        printf("Erreur : segment %s introuvable ou non initialisé.\n", segment);
+        return NULL;
+    }
+
+    // Calculer l'adresse
+    int address = seg->start + *registre_val;
+    if (address < seg->start || address >= seg->start + seg->size) {
+        printf("Erreur : adresse effective hors des limites du segment %s.\n", segment);
+        return NULL;
+    }
+
+    // Récupérer et retourner la donnée stockée à l'adresse
+    void *data = cpu->memory_handler->memory[address];
+    if (data == NULL) {
+        printf("Erreur : aucune donnée trouvée à l'adresse %d dans le segment %s.\n", address, segment);
+        return NULL;
+    }
+
+    printf("Donnée récupérée à l'adresse %d dans le segment %s.\n", address, segment);
+
+    return data;
+}
+
+void *resolve_addressing(CPU *cpu, const char *operand, const char *mnemonic) {
+    if (cpu == NULL || operand == NULL || mnemonic == NULL)
+        return NULL;
+
+    void *result;
+
+    result = immediate_addressing(cpu, operand);
+    if (result != NULL)
+        return result;
+
+    result = register_addressing(cpu, operand);
+    if (result != NULL)
+        return result;
+
+    result = memory_direct_addressing(cpu, operand, mnemonic);
+    if (result != NULL)
+        return result;
+
+    result = register_indirect_addressing(cpu, operand);
+    if (result != NULL)
+        return result;
+
+    printf("Erreur : aucun mode d'adressage valide trouvé pour l'opérande : %s\n", operand);
+    return NULL;
+}
+
+#pragma endregion
+
+#pragma region DataSegment
+
+void *store(MemoryHandler *handler, const char *segment_name, int pos, void *data) {
+    if (segment_name == NULL || handler == NULL || data == NULL) {
+        printf("Erreur : argument invalide (segment_name, handler ou data est NULL).\n");
+        return NULL;
+    }
+
+    Segment *s = hashmap_get(handler->allocated, segment_name);
+    if (s == NULL) {
+        printf("Erreur : segment \"%s\" introuvable dans la mémoire allouée.\n", segment_name);
+        return NULL;
+    }
+
+    if (pos < 0 || pos >= s->size) {
+        printf("Erreur : position %d est hors des bornes du segment \"%s\" "
+               "(taille "
+               "%d).\n",
+               pos, segment_name, s->size);
+        return NULL;
+    }
+
+    // Vérifier si la mémoire est déjà allouée
+    // @todo si on n'empeche pas d'écrire sur une cases non vide, on ne pourra pas libérer la mémoire de l'ancienne
+    // valeur.
+    // @todo on pourrait faire un free avant de réécrire ???
+    if (handler->memory[s->start + pos] != NULL) {
+        printf("On modifie la mémoire à la position %d du segment %s : %d -> %d.\n", pos, segment_name,
+               *(int *)handler->memory[s->start + pos], *(int *)data);
+    }
+    // Allouer la mémoire pour la nouvelle valeur
+    hashmap_insert(handler->allocated, segment_name, data);
+    handler->memory[s->start + pos] = data;
+    return handler->memory[s->start + pos];
+}
+
+void *load(MemoryHandler *handler, const char *segment_name, int pos) {
+    if (segment_name == NULL || handler == NULL) {
+        printf("Erreur : argument invalide (segment_name ou handler est NULL).\n");
+        return NULL;
+    }
+    Segment *s = hashmap_get(handler->allocated, segment_name);
+    if (s == NULL) {
+        printf("Erreur : segment \"%s\" introuvable dans la mémoire allouée.\n", segment_name);
+        return NULL;
+    }
+    if (pos < 0 || pos >= s->size) {
+        printf("Erreur : position %d est hors des bornes du segment \"%s\" "
+               "(taille "
+               "%d).\n",
+               pos, segment_name, s->size);
+        return NULL;
+    }
+
+    return handler->memory[s->start + pos];
+}
+
+int parserStringVal(const char *str) {
+    if (str == NULL)
+        return 0;
+
+    int count = 1;
+    for (int i = 0; str[i]; i++) {
+        if (str[i] == ',')
+            count++;
+    }
+    return count;
+}
+
+int parserString(const char *str, int **tab) {
+    if (str == NULL || tab == NULL)
+        return 0;
+
+    int count = parserStringVal(str);
+    *tab = malloc(sizeof(int) * count);
+    if (*tab == NULL) {
+        printf("Erreur d'allocation mémoire dans parserString\n");
+        return 0;
+    }
+
+    char *copy = strdup(str);
+    if (copy == NULL)
+        return 0;
+
+    char *token = strtok(copy, ",");
+    int index = 0;
+
+    while (token != NULL && index < count) {
+        (*tab)[index++] = atoi(token);
+        token = strtok(NULL, ",");
+    }
+
+    free(copy);
+    return count;
+}
+
+void allocate_variables(CPU *cpu, Instruction **data_instructions, int data_count) {
+    if (cpu == NULL || data_instructions == NULL || data_count < 0) {
+        printf("Erreur : argument invalide.\n");
+        return;
+    }
+
+    int total_values = 0;
+
+    for (int i = 0; i < data_count; i++) {
+        total_values += parserStringVal(data_instructions[i]->operand2);
+    }
+
+    int pos = getSegFreePos(cpu->memory_handler, total_values);
+    create_segment(cpu->memory_handler, "DS", pos, total_values);
+
+    int current_index = 0;
+
+    for (int i = 0; i < data_count; i++) {
+        int *values;
+        int count = parserString(data_instructions[i]->operand2, &values);
+        // const char *var_name = data_instructions[i]->mnemonic;
+
+        for (int j = 0; j < count; j++) {
+            int *val = malloc(sizeof(int));
+            *val = values[j];
+
+            if (store(cpu->memory_handler, "DS", current_index, val) == NULL) {
+                printf("Erreur de stockage à l'index %d\n", current_index);
+                free(val);
+                continue;
+            }
+
+            /*if (j == 0 && var_name != NULL) {
+                hashmap_insert(pr->memory_locations, var_name, (void *)(long)(current_index));
+            }*/
+
+            current_index++;
+        }
+
+        free(values);
+    }
+}
+
+void print_data_segment(CPU *cpu) {
+    if (cpu == NULL)
+        return;
+
+    Segment *s = hashmap_get(cpu->memory_handler->allocated, "DS");
+    if (s == NULL) {
+        printf("Pas de segment 'DS' dans la mémoire.\n");
+        return;
+    }
+    if (s->size == 0) {
+        printf("Le segment DS est vide\n");
+    } else {
+
+        printf("Contenu du segment de données 'DS' :\n");
+        printf("%d élement(s)\n", s->size);
+
+        for (int i = 0; i < s->size; i++) {
+            int index = s->start + i;
+            int *valeur = (int *)(cpu->memory_handler->memory[index]);
+
+            if (valeur != NULL) {
+                printf("DS[%d] = %d\n", i, *valeur);
+            } else {
+                printf("DS[%d] = (vide)\n", i);
+            }
+        }
+    }
+
+    // printf("Total elements in 'DS': %d\n", s->size);
+}
+
+#pragma endregion
+
+#pragma region StackSegment
+
+int push_value(CPU *cpu, int value) {
+    if (cpu == NULL) {
+        printf("Erreur : argument invalide (cpu est NULL).\n");
+        return -1;
+    }
+
+    Segment *ss = hashmap_get(cpu->memory_handler->allocated, "SS");
+    if (ss == NULL) {
+        printf("Erreur : segment de pile introuvable.\n");
+        return -1;
+    }
+    printf("SS start: %d\n", ss->start);
+
+    int *sp = (int *)hashmap_get(cpu->context, "SP");
+    if (sp == NULL) {
+        printf("Erreur : registre SP introuvable.\n");
+        return -1;
+    }
+    printf("SP : %d\n", *sp);
+
+    if (*sp - 1 < ss->start) {
+        printf("Erreur : stack overflow\n");
+        return -1;
+    }
+
+    // On cherche la valeur dans constant pool
+    int *valeur = (int *)hashmap_get(cpu->constant_pool, "value");
+    if (valeur == NULL) {
+        // Si la valeur n'est pas trouvée, on l'alloue
+        valeur = (int *)malloc(sizeof(int));
+        if (valeur == NULL) {
+            perror("Erreur d'allocation pour valeur");
+            return -1;
+        }
+        *valeur = value;
+
+        // Convertir la valeur en chaîne de caractères
+        char snum[20];
+        sprintf(snum, "%d", value);
+
+        int res_insert = hashmap_insert(cpu->constant_pool, snum, valeur);
+        if (res_insert != 1) {
+            printf("Erreur : échec de l'insertion dans le pool constant.\n");
+            free(valeur);
+            return -1;
+        }
+    }
+
+    *valeur = value;
+
+    //@todo peut etre pas bonne méthode et pas besoin de malloc ? on verra à la fin
+    // on insère la valeur dans la mémoire du cpu
+    *sp -= 1;
+    if (store(cpu->memory_handler, "SS", *sp - ss->start, valeur) == NULL) {
+        printf("Erreur : échec de l'insertion de la valeur dans le segment de pile.\n");
+        *sp += 1;
+        return -1;
+    }
+
+    return 0;
+}
+
+int pop_value(CPU *cpu, int *dest) {
+    if (cpu == NULL) {
+        printf("Erreur : argument invalide (cpu est NULL).\n");
+        return -1;
+    }
+
+    Segment *ss = hashmap_get(cpu->memory_handler->allocated, "SS");
+    if (ss == NULL) {
+        printf("Erreur : segment de pile introuvable.\n");
+        return -1;
+    }
+
+    int *sp = (int *)hashmap_get(cpu->context, "SP");
+    if (sp == NULL) {
+        printf("Erreur : registre SP introuvable.\n");
+        return -1;
+    }
+
+    // On vérifie que la pile n'est pas vide
+    if (*sp >= ss->start + ss->size) {
+        printf("Erreur : stack underflow\n");
+        return -1;
+    }
+
+    // Récupération
+    int abs_index = *sp;
+    int *valeur = load(cpu->memory_handler, "SS", abs_index - ss->start);
+    if (valeur == NULL) {
+        printf("Erreur : échec de la récupération de la valeur.\n");
+        return -1;
+    }
+
+    // Stockage dans le registre
+    if (dest == NULL) {
+        dest = hashmap_get(cpu->context, "AX");
+        if (dest == NULL) {
+            printf("Erreur : registre AX introuvable.\n");
+            return -1;
+        }
+    }
+
+    *dest = *valeur;
+
+    // Libération
+    //@todo verifier est-ce que il a ete alloué
+    free(cpu->memory_handler->memory[abs_index]);
+    cpu->memory_handler->memory[abs_index] = NULL;
+
+    // Incrémenter SP
+    *sp += 1;
+
+    return 0;
+}
+
+void allocate_stack_segment(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : argument invalide.\n");
+        return;
+    }
+
+    // On vérifie que data segment est déjà alloué
+    Segment *ds = hashmap_get(cpu->memory_handler->allocated, "DS");
+    if (ds == NULL) {
+        printf("Erreur : le segment de données n'est pas alloué.\n");
+        return;
+    }
+
+    // Initialise le Stack Segment
+    int *sp = hashmap_get(cpu->context, "SP");
+    int *bp = hashmap_get(cpu->context, "BP");
+    if (sp == NULL || bp == NULL) {
+        printf("Erreur : registre SP ou BP introuvable.\n");
+        return;
+    }
+
+    // On crée le segment de pile
+    Segment *prev = NULL;
+    Segment *ss_candidat = find_free_segment(cpu->memory_handler, ds->start + ds->size, SS_SIZE, &prev);
+    if (ss_candidat == NULL) {
+        printf("Erreur : pas assez de mémoire pour le segment de pile.\n");
+        return;
+    } else if (ss_candidat->start != ds->start + ds->size) {
+        printf("Erreur : le segment de pile n'est pas adjacent au segment de données.\n");
+        return;
+    }
+
+    int r = create_segment(cpu->memory_handler, "SS", ds->start + ds->size, SS_SIZE);
+    if (r == -1 || r == 0) {
+        printf("Erreur : le stack segment n'est pas initialisé\n");
+    }
+
+    *sp = ds->start + ds->size + SS_SIZE - 1;
+    *bp = ds->start + ds->size + SS_SIZE - 1;
+    printf("SP: %d\n", *sp);
+}
+
+#pragma endregion
+
+#pragma region CodeSegment
 
 void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_count) {
     if (cpu == NULL || code_instructions == NULL || code_count < 0) {
@@ -467,7 +871,6 @@ void allocate_code_segment(CPU *cpu, Instruction **code_instructions, int code_c
         printf("Erreur : registre IP introuvable\n");
     }
 }
-
 
 void afficher_instructions(Instruction **liste, int count) {
     if (liste == NULL || count == 0) {
@@ -540,7 +943,7 @@ int handle_JMP(CPU *cpu, void *adress) {
         return -1;
     }
 
-    int *val = (int *)adress; 
+    int *val = (int *)adress;
 
     Segment *CS = hashmap_get(cpu->memory_handler->allocated, "CS");
     if (CS == NULL) {
@@ -581,7 +984,7 @@ int handle_JZ(CPU *cpu, void *adress) {
     }
 
     if (*ZF == 1 && CS != NULL && IP != NULL) {
-        *IP = CS->start + *(int *)adress;  // <== добавляем смещение сегмента
+        *IP = CS->start + *(int *)adress; // <== добавляем смещение сегмента
     }
     return 0;
 }
@@ -668,7 +1071,6 @@ int handle_POP(CPU *cpu, void *dest) {
     return 0;
 }
 
-
 int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
     if (cpu == NULL || instr == NULL) {
         printf("Erreur : argument invalide.\n");
@@ -728,7 +1130,7 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
     } else if (strncmp(instr->mnemonic, "POP", 3) == 0) {
         // Ici, src (operand 1) est la destination où la valeur sera dépilée
         // dest (operand 2) n'est pas utilisé
-        return handle_POP(cpu, src);  
+        return handle_POP(cpu, src);
 
     } else {
         printf("Erreur : instruction \"%s\" non reconnue.\n", instr->mnemonic);
@@ -747,9 +1149,9 @@ int execute_instruction(CPU *cpu, Instruction *instr) {
     void *src = NULL;
     void *dest = NULL;
 
-    if (strncmp(instr->mnemonic, "JMP", 3) == 0 || strncmp(instr->mnemonic, "JZ", 2) == 0 || 
-        strncmp(instr->mnemonic, "JNZ", 3) == 0 || strncmp(instr->mnemonic, "PUSH", 4) == 0 || 
-        strncmp(instr->mnemonic, "POP", 3) == 0 ) {
+    if (strncmp(instr->mnemonic, "JMP", 3) == 0 || strncmp(instr->mnemonic, "JZ", 2) == 0 ||
+        strncmp(instr->mnemonic, "JNZ", 3) == 0 || strncmp(instr->mnemonic, "PUSH", 4) == 0 ||
+        strncmp(instr->mnemonic, "POP", 3) == 0) {
         src = resolve_addressing(cpu, instr->operand1, instr->mnemonic);
         printf("SRC: %d\n", *(int *)src);
         return handle_instruction(cpu, instr, src, dest);
@@ -795,7 +1197,7 @@ Instruction *fetch_next_instruction(CPU *cpu) {
         return NULL;
     }
 
-    //printf("IP: %d\n", *IP);
+    // printf("IP: %d\n", *IP);
 
     Instruction *instr = (Instruction *)(cpu->memory_handler->memory[*IP]);
     (*IP)++;
@@ -834,7 +1236,7 @@ int run_program(CPU *cpu) {
         }
 
         int r = execute_instruction(cpu, inst);
-        //printf("RESULT: %d", r);
+        // printf("RESULT: %d", r);
 
         if (r == -1) {
             printf("Erreur lors de l'exécution de l'instruction.\n");
@@ -842,7 +1244,7 @@ int run_program(CPU *cpu) {
         }
 
         print_registres_et_drapeaux(cpu);
-        print_stack_segment(cpu);
+        // display_stack_segment(cpu);
     }
 
     printf("\n=== ÉTAT FINAL ===\n");
@@ -883,371 +1285,154 @@ void print_registres_et_drapeaux(CPU *cpu) {
 
 #pragma endregion
 
-#pragma region Adressing
+#pragma region ExtraSegment
 
-int matches(const char *pattern, const char *string) {
-    regex_t regex;
-    int result = regcomp(&regex, pattern, REG_EXTENDED);
-    if (result) {
-        fprintf(stderr, "Regex compilation failed for pattern: %s\n", pattern);
-        return 0;
+int find_free_address_strategy(MemoryHandler *handler, int size, int strategy) {
+    if (handler == NULL) {
+        printf("Erreur : argument invalide (handler est NULL).\n");
+        return -1;
     }
-    result = regexec(&regex, string, 0, NULL, 0);
-    regfree(&regex);
-    return result == 0;
-}
-
-void *immediate_addressing(CPU *cpu, const char *operand) {
-    if (cpu == NULL || operand == NULL) {
-        printf("Erreur : argument invalide (cpu ou operand est NULL).\n");
-        return NULL;
+    if (size <= 0) {
+        printf("Erreur : taille invalide (doit être positive).\n");
+        return -1;
     }
 
-    char cleaned[32];
-    strncpy(cleaned, operand, sizeof(cleaned) - 1);
-    cleaned[sizeof(cleaned) - 1] = '\0';
-    char *op = trim(cleaned);
+    Segment *current = handler->free_list;
+    Segment *selected = NULL;
 
-    if (matches("^-?[0-9]+$", op)) {
-        int *valeur = (int *)hashmap_get(cpu->constant_pool, op);
-        if (valeur == NULL) {
-            valeur = (int *)malloc(sizeof(int));
-            if (valeur == NULL) {
-                perror("Erreur d'allocation pour valeur");
-                return NULL;
+    while (current != NULL) {
+        if (current->size >= size) {
+            if (strategy == 0) { // First Fit
+                return current->start;
+            } else if (strategy == 1) { // Best Fit
+                if (selected == NULL || current->size < selected->size) {
+                    selected = current;
+                }
+            } else if (strategy == 2) { // Worst Fit
+                if (selected == NULL || current->size > selected->size) {
+                    selected = current;
+                }
             }
+        }
+        current = current->next;
+    }
 
-            char *endptr;
-            *valeur = (int)strtol(op, &endptr, 10);
-            if (*endptr != '\0') {
-                printf("Erreur : operand n'est pas un entier valide : %s\n", op);
-                free(valeur);
-                return NULL;
+    if (selected != NULL) {
+        return selected->start;
+    }
+
+    printf("Erreur : aucun segment libre suffisamment grand trouvé.\n");
+    return -1;
+}
+
+int alloc_es_segment(CPU *cpu) {
+    int *ax = (int *)hashmap_get(cpu->context, "AX");
+    int *bx = (int *)hashmap_get(cpu->context, "BX");
+    int *zf = (int *)hashmap_get(cpu->context, "ZF");
+    int *es = (int *)hashmap_get(cpu->context, "ES");
+
+    if (ax == NULL || bx == NULL || zf == NULL || es == NULL) {
+        printf("Erreur : registre AX, BX, ZF ou ES introuvable.\n");
+        return -1;
+    }
+
+    // On cherche une zone libre pour le segment ES
+    int res = find_free_address_strategy(cpu->memory_handler, *ax, *bx);
+    if (res == -1) {
+        printf("Erreur : pas assez de mémoire pour allouer le segment ES.\n");
+        *zf = 1;
+        return -1;
+    }
+
+    // On crée le segment ES
+    int r = create_segment(cpu->memory_handler, "ES", res, *ax);
+    if (r != 1) {
+        printf("Erreur : échec de la création du segment ES.\n");
+        *zf = 1;
+        return -1;
+    }
+
+    Segment *es_segment = hashmap_get(cpu->memory_handler->allocated, "ES");
+    if (es_segment == NULL) {
+        printf("Erreur : échec de la création du segment ES.\n");
+        *zf = 1;
+        return -1;
+    }
+
+    // On initialise le segment ES avec des 0
+    for (int i = 0; i < *ax; i++) {
+        int *zero = malloc(sizeof(int));
+        if (zero == NULL) {
+            printf("Erreur : échec de l'allocation de mémoire pour le segment ES.\n");
+            int rem = remove_segment(cpu->memory_handler, "ES");
+            if (rem == -1) {
+                printf("Erreur : échec de la suppression du segment ES.\n");
             }
-
-            hashmap_insert(cpu->constant_pool, op, valeur);
-        }
-        return valeur;
-    }
-    // printf("Ce n'est pas un adressage immédiat : %s\n", op);
-    return NULL;
-}
-
-void *register_addressing(CPU *cpu, const char *operand) {
-    if (cpu == NULL || operand == NULL) {
-        printf("Erreur : argument invalide (cpu ou operand est NULL).\n");
-        return NULL;
-    }
-
-    char cleaned[32];
-    strncpy(cleaned, operand, sizeof(cleaned) - 1);
-    cleaned[sizeof(cleaned) - 1] = '\0';
-
-    char *op = trim(cleaned);
-
-    if (matches("^[ABCD]X$", op)) {
-        int *valeur = (int *)hashmap_get(cpu->context, op);
-        if (valeur == NULL) {
-            printf("Registre %s est vide ou non initialisé.\n", op);
-            return NULL;
-        }
-        return valeur;
-    }
-
-    // printf("Ce n'est pas un adressage par régistre : %s\n", op);
-    return NULL;
-}
-
-void *memory_direct_addressing(CPU *cpu, const char *operand, const char *mnemonic) {
-    if (cpu == NULL || operand == NULL || mnemonic == NULL) return NULL;
-
-    char cleaned[32];
-    strncpy(cleaned, operand, sizeof(cleaned) - 1);
-    cleaned[sizeof(cleaned) - 1] = '\0';
-    char *op = trim(cleaned);
-
-    if (matches("^\\[-?[0-9]+\\]$", op)) {
-        int address;
-        if (sscanf(op, "[%d]", &address) != 1) return NULL;
-
-        const char *segment = (strncmp(mnemonic, "JMP", 3) == 0 || strncmp(mnemonic, "JZ", 2) == 0 || strncmp(mnemonic, "JNZ", 3) == 0) ? "CS" : "DS";
-        Segment *seg = hashmap_get(cpu->memory_handler->allocated, segment);
-        if (!seg) return NULL;
-
-        if (address < 0 || address >= seg->size) return NULL;
-
-        // 👇 вместо возврата указателя на инструкцию
-        if (strncmp(mnemonic, "JMP", 3) == 0 || strncmp(mnemonic, "JZ", 2) == 0 || strncmp(mnemonic, "JNZ", 3) == 0) {
-            int *val = malloc(sizeof(int));
-            *val = address; // вернуть индекс, не адрес памяти
-            return val;
-        }
-
-        return cpu->memory_handler->memory[seg->start + address];
-    }
-
-    return NULL;
-}
-
-
-
-void *register_indirect_addressing(CPU *cpu, const char *operand) {
-    if (cpu == NULL || operand == NULL) {
-        printf("Erreur : argument invalide (cpu ou operand est NULL).\n");
-        return NULL;
-    }
-
-    char cleaned[32];
-    strncpy(cleaned, operand, sizeof(cleaned) - 1);
-    cleaned[sizeof(cleaned) - 1] = '\0';
-    char *trimmed = trim(cleaned);
-
-    if (matches("^\\[(A|B|C|D)X\\]$", trimmed)) {
-        char registre[10];
-        size_t len = strlen(trimmed);
-        if (len < 4) {
-            printf("Erreur : nom de registre invalide.\n");
-            return NULL;
-        }
-        strncpy(registre, trimmed + 1, len - 2);
-        registre[len - 2] = '\0';
-        return register_addressing(cpu, registre);
-    }
-    // printf("Cette commande n'est pas un adressage indirect par registre : %s\n", operand);
-    return NULL;
-}
-
-void *resolve_addressing(CPU *cpu, const char *operand, const char *mnemonic) {
-    if (cpu == NULL || operand == NULL || mnemonic == NULL) return NULL;
-
-    void *result;
-
-    result = immediate_addressing(cpu, operand);
-    if (result != NULL) return result;
-
-    result = register_addressing(cpu, operand);
-    if (result != NULL) return result;
-
-    result = memory_direct_addressing(cpu, operand, mnemonic); 
-    if (result != NULL) return result;
-
-    result = register_indirect_addressing(cpu, operand);
-    if (result != NULL) return result;
-
-
-    printf("Erreur : aucun mode d'adressage valide trouvé pour l'opérande : %s\n", operand);
-    return NULL;
-}
-
-
-#pragma endregion
-
-#pragma region Stack
-
-int push_value(CPU *cpu, int value) {
-    if (cpu == NULL) {
-        printf("Erreur : argument invalide (cpu est NULL).\n");
-        return -1;
-    }
-
-    Segment *ss = hashmap_get(cpu->memory_handler->allocated, "SS");
-    if (ss == NULL) {
-        printf("Erreur : segment de pile introuvable.\n");
-        return -1;
-    }
-    printf("SS start: %d\n", ss->start);
-
-    int *sp = (int *)hashmap_get(cpu->context, "SP");
-    if (sp == NULL) {
-        printf("Erreur : registre SP introuvable.\n");
-        return -1;
-    }
-    printf("SP : %d\n", *sp);
-
-    if (*sp - 1 < ss->start) {
-        printf("Erreur : stack overflow\n");
-        return -1;
-    }
-
-    // On cherche la valeur dans constant pool
-    int *valeur = (int *)hashmap_get(cpu->constant_pool, "value");
-    if (valeur == NULL) {
-        // Si la valeur n'est pas trouvée, on l'alloue
-        valeur = (int *)malloc(sizeof(int));
-        if (valeur == NULL) {
-            perror("Erreur d'allocation pour valeur");
+            *zf = 1;
             return -1;
         }
-        *valeur = value;
-
-        // Convertir la valeur en chaîne de caractères
-        char snum[20];
-        sprintf(snum, "%d", value);
-
-        int res_insert = hashmap_insert(cpu->constant_pool, snum, valeur);
-        if (res_insert != 1) {
-            printf("Erreur : échec de l'insertion dans le pool constant.\n");
-            free(valeur);
+        *zero = 0;
+        // On stocke la valeur 0 dans le segment ES
+        if (store(cpu->memory_handler, "ES", i, zero) == NULL) {
+            printf("Erreur : échec de l'initialisation du segment ES.\n");
+            // On libère tous les zeros déjà alloués
+            for (int j = 0; j < i; j++) {
+                free(cpu->memory_handler->memory[es_segment->start + j]);
+            }
+            int rem = remove_segment(cpu->memory_handler, "ES");
+            if (rem == -1) {
+                printf("Erreur : échec de la suppression du segment ES.\n");
+            }
+            *zf = 1;
             return -1;
         }
     }
-
-    *valeur = value;
-
-    //@todo peut etre pas bonne méthode et pas besoin de malloc ? on verra à la fin
-    // on insère la valeur dans la mémoire du cpu
-    *sp -= 1;
-    if (store(cpu->memory_handler, "SS", *sp - ss->start, valeur) == NULL) {
-        printf("Erreur : échec de l'insertion de la valeur dans le segment de pile.\n");
-        *sp += 1;
-        return -1;
-    }
-
+    *zf = 0;
+    *es = res;
     return 0;
 }
 
-int pop_value(CPU *cpu, int *dest) {
+int free_es_segment(CPU *cpu) {
     if (cpu == NULL) {
-        printf("Erreur : argument invalide (cpu est NULL).\n");
+        printf("Erreur : argument invalide (CPU est NULL).\n");
         return -1;
     }
 
-    Segment *ss = hashmap_get(cpu->memory_handler->allocated, "SS");
-    if (ss == NULL) {
-        printf("Erreur : segment de pile introuvable.\n");
+    // Obtention des pointeurs
+    Segment *es_segment = hashmap_get(cpu->memory_handler->allocated, "ES");
+    if (es_segment == NULL) {
+        printf("Erreur : segment ES introuvable.\n");
         return -1;
     }
 
-    int *sp = hashmap_get(cpu->context, "SP");
-    if (sp == NULL) {
-        printf("Erreur : registre SP introuvable.\n");
+    int *es = (int *)hashmap_get(cpu->context, "ES");
+    if (es == NULL) {
+        printf("Erreur : registre ES introuvable.\n");
         return -1;
     }
 
-    // Vérifie que la pile n'est pas vide
-    if (*sp >= ss->start + ss->size) {
-        printf("Erreur : stack underflow\n");
-        return -1;
-    }
-
-    // Récupération
-    int abs_index = *sp;
-    int *valeur = load(cpu->memory_handler, "SS", abs_index - ss->start);
-    if (valeur == NULL) {
-        printf("Erreur : échec de la récupération de la valeur.\n");
-        return -1;
-    }
-
-    // Stockage dans le registre
-    if (dest == NULL) {
-        dest = hashmap_get(cpu->context, "AX");
-        if (dest == NULL) {
-            printf("Erreur : registre AX introuvable.\n");
+    // Libérer la mémoire allouée pour le segment ES
+    for (int i = 0; i < es_segment->size; i++) {
+        int *val = load(cpu->memory_handler, "ES", i);
+        if (val == NULL) {
+            printf("Erreur : échec de la récupération de la valeur dans le segment ES.\n");
             return -1;
         }
+        free(val);
     }
 
-    *dest = *valeur;
+    // Supprimer le segment ES de la table des segments alloués
+    int res = remove_segment(cpu->memory_handler, "ES");
+    if (res == -1) {
+        printf("Erreur : échec de la suppression du segment ES.\n");
+        return -1;
+    }
 
-    // Libération
-    //@todo verifier est-ce que il a ete alloué
-    free(cpu->memory_handler->memory[abs_index]);
-    cpu->memory_handler->memory[abs_index] = NULL;
+    // Réinitialiser le registre ES à -1
+    *es = -1;
 
-    // Incrémenter SP
-    *sp += 1;
-
+    printf("Segment ES libéré avec succès.\n");
     return 0;
-}
-
-
-
-void allocate_stack_segment(CPU *cpu) {
-    if (cpu == NULL) {
-        printf("Erreur : argument invalide.\n");
-        return;
-    }
-
-    // On vérifie que data segment est déjà alloué
-    Segment *ds = hashmap_get(cpu->memory_handler->allocated, "DS");
-    if (ds == NULL) {
-        printf("Erreur : le segment de données n'est pas alloué.\n");
-        return;
-    }
-
-    // Initialise le Stack Segment
-    int *sp = hashmap_get(cpu->context, "SP");
-    int *bp = hashmap_get(cpu->context, "BP");
-    if (sp == NULL || bp == NULL) {
-        printf("Erreur : registre SP ou BP introuvable.\n");
-        return;
-    }
-
-    // On crée le segment de pile
-    Segment *prev = NULL;
-    Segment *ss_candidat = find_free_segment(cpu->memory_handler, ds->start + ds->size, SS_SIZE, &prev);
-    if (ss_candidat == NULL) {
-        printf("Erreur : pas assez de mémoire pour le segment de pile.\n");
-        return;
-    } else if (ss_candidat->start != ds->start + ds->size) {
-        printf("Erreur : le segment de pile n'est pas adjacent au segment de données.\n");
-        return;
-    }
-
-    int r = create_segment(cpu->memory_handler, "SS", ds->start + ds->size, SS_SIZE);
-    if (r == -1 || r == 0) {
-        printf("Erreur : le stack segment n'est pas initialisé\n");
-    }
-
-   *sp = ds->start + ds->size + SS_SIZE;  
-   *bp = ds->start + ds->size + SS_SIZE;
-   printf("SP: %d\n", *sp);
-}
-
-void print_stack_segment(CPU *cpu) {
-    if (cpu == NULL) {
-        printf("Erreur : CPU est NULL.\n");
-        return;
-    }
-
-    Segment *ss = hashmap_get(cpu->memory_handler->allocated, "SS");
-    if (ss == NULL) {
-        printf("Erreur : segment de pile 'SS' introuvable.\n");
-        return;
-    }
-
-    int *sp = (int *)hashmap_get(cpu->context, "SP");
-    int *bp = (int *)hashmap_get(cpu->context, "BP");
-
-    if (sp == NULL || bp == NULL) {
-        printf("Erreur : registres SP ou BP introuvables.\n");
-        return;
-    }
-
-    printf("Contenu du segment de pile 'SS' (de %d à %d) :\n", ss->start, ss->start + ss->size - 1);
-    int count = 0;
-    for (int i = 0; i < ss->size; i++) {
-        int addr = ss->start + i;
-        int *val = (int *)(cpu->memory_handler->memory[addr]);
-
-        if (val != NULL) {
-            printf("SS[%d] = %d", i, *val);
-
-            if (addr == *sp) {
-                printf(" <-- SP");
-            }
-            if (addr == *bp) {
-                printf(" <-- BP");
-            }
-
-            printf("\n");
-            count++;
-        }
-    }
-
-    if (count == 0) {
-        printf("Pile vide (aucune case utilisée).\n");
-    }
 }
 
 #pragma endregion

@@ -180,16 +180,19 @@ void memory_destroy(MemoryHandler *handler) {
         return;
     }
 
+    display_segments(handler->free_list);
     Segment *temp = handler->free_list;
     while (temp != NULL) {
         Segment *next = temp->next;
         free(temp);
         temp = next;
     }
+    handler->free_list = NULL;
+    display_segments(handler->free_list);
 
     hashmap_destroy(handler->allocated);
-    
-    for(int i = 0; i < handler->total_size; i++) {
+
+    for (int i = 0; i < handler->total_size; i++) {
         free(handler->memory[i]);
     }
     free(handler->memory);

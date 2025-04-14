@@ -138,7 +138,6 @@ void hashmap_destroy(HashMap *map) {
         perror("Erreur: la table de hachage est NULL\n");
         return;
     }
-
     for (int i = 0; i < map->size; i++) {
         if (map->table[i].key != NULL && map->table[i].key != TOMBSTONE) {
             free(map->table[i].key);
@@ -153,6 +152,8 @@ void hashmap_destroy(HashMap *map) {
                 }
                 break;
             case SEGMENT:
+                printf("libération des segments en hashmap\n");
+                display_segments((Segment *)map->table[i].value);
                 if (map->table[i].value != NULL) {
                     Segment *s = (Segment *)map->table[i].value;
                     while (s != NULL) {
