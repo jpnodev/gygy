@@ -1,4 +1,5 @@
 #include "memory.h"
+#include "debug.h"
 
 MemoryHandler *memory_init(int size) {
     MemoryHandler *mem = (MemoryHandler *)malloc(sizeof(MemoryHandler));

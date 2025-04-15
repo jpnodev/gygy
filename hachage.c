@@ -1,5 +1,6 @@
 #include "hachage.h"
 #include "memory.h"
+#include "debug.h"
 
 unsigned long simple_hash(const char *str) {
     if (str == NULL)

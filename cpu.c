@@ -212,7 +212,7 @@ int search_and_replace(char **str, HashMap *values) {
 
                 int key_len = strlen(key);
                 int repl_len = strlen(replacement);
-                int remain_len = strlen(substr + key_len);
+                //int remain_len = strlen(substr + key_len);
 
                 // Create new string
                 char *new_str = (char *)malloc(strlen(input) - key_len + repl_len + 1);
