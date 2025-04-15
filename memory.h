@@ -51,7 +51,12 @@ int remove_segment(MemoryHandler *handler, const char *name);
 // Cette fonction libère toute la mémoire associée au gestionnaire de mémoire (MemoryHandler).
 void memory_destroy(MemoryHandler* handler);
 
+// Retourne la première position libre pouvant contenir un segment de taille `size`.
+// Renvoie -1 si aucun segment libre n’est suffisant.
 int getSegFreePos(MemoryHandler* handler, int size);
+
+// Affiche tous les segments libres présents dans la mémoire.
+// Si la free_list est vide, affiche un message spécifique.
 void print_free_list(MemoryHandler *handler);   
 
 #endif
