@@ -5,3 +5,5 @@ test_cpu
 *.o
 /.vscode
 test_hachage
+test_stack
+test_cpu_adressing
