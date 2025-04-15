@@ -30,7 +30,8 @@ typedef struct {
     HashMap *memory_locations;       // Association des noms de variables avec leurs adresses mémoire
 } ParserResult;
 
-static int taille = 0;
+//@todo j'ai commenté c'est jamais utilisé je sais pas ce que c'est ...
+// static int taille = 0;
 
 // Cette fonction initialise la structure ParserResult, deux structures data_instructions et code_instructions.
 // Elle les met à NULL, data_count et code_count à 0 (parce qu'on n'a aucune commande à l'initialisation).
