@@ -30,6 +30,8 @@ typedef struct {
     HashMap *memory_locations;       // Association des noms de variables avec leurs adresses mémoire
 } ParserResult;
 
+static int taille = 0;
+
 // Cette fonction initialise la structure ParserResult, deux structures data_instructions et code_instructions.
 // Elle les met à NULL, data_count et code_count à 0 (parce qu'on n'a aucune commande à l'initialisation).
 // Après, on initialise labels et memory_locations avec la fonction hashmap_create().
@@ -83,5 +85,7 @@ void free_parser_result(ParserResult *result);
 // Elle détruit également les deux tables de hachage : labels et memory_locations.
 // Enfin, elle libère la structure ParserResult elle-même.
 void liberer_instruction(Instruction *i);
+
+void reset_parse_offset();
 
 #endif

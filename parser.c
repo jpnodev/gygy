@@ -22,8 +22,6 @@ Instruction *parse_data_instruction(const char *line, HashMap *memory_locations)
         return NULL;
     }
 
-    static int taille = 0;
-
     Instruction *instruction = (Instruction *)malloc(sizeof(Instruction));
     if (instruction == NULL) {
         perror("Erreur d'allocation de la mémoire pour data_instructions");
@@ -272,4 +270,8 @@ void free_parser_result(ParserResult *result) {
     hashmap_destroy(result->memory_locations);
 
     free(result);
+}
+
+void reset_parse_offset() {
+    taille = 0;
 }
