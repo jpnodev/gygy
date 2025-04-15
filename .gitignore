@@ -7,3 +7,4 @@ test_cpu
 test_hachage
 test_stack
 test_cpu_adressing
+test_extra

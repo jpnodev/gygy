@@ -39,6 +39,10 @@ HashMap *hashmap_create(hashmap_value_t type) {
         return NULL;
     }
 
+    for (int i = 0; i < map->size; i++) {
+        map->table[i].key = NULL;
+        map->table[i].value = NULL;
+    }
     return map;
 }
 
@@ -55,7 +59,9 @@ int hashmap_insert(HashMap *map, const char *key, void *value) {
 
         if (map->table[index].key == NULL || map->table[index].key == TOMBSTONE) {
             if (map->table[index].key == TOMBSTONE) {
-                free(map->table[index].key);
+                if (map->table[index].value != NULL) {
+                    free(map->table[index].value);
+                }
             }
 
             map->table[index].key = strdup(key);

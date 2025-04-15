@@ -299,7 +299,7 @@ void *immediate_addressing(CPU *cpu, const char *operand) {
         return NULL;
     }
 
-    printf("immediate_addressing : %s\n", operand);
+    // printf("immediate_addressing : %s\n", operand);
 
     char cleaned[32];
     strncpy(cleaned, operand, sizeof(cleaned) - 1);
@@ -337,7 +337,7 @@ void *register_addressing(CPU *cpu, const char *operand) {
         return NULL;
     }
 
-    printf("register_addressing: %s\n", operand);
+    // printf("register_addressing: %s\n", operand);
 
     char cleaned[32];
     strncpy(cleaned, operand, sizeof(cleaned) - 1);
@@ -363,7 +363,7 @@ void *memory_direct_addressing(CPU *cpu, const char *operand, const char *mnemon
     if (cpu == NULL || operand == NULL || mnemonic == NULL)
         return NULL;
 
-    printf("memory_direct_addressing : %s\n", operand);
+    // printf("memory_direct_addressing : %s\n", operand);
 
     char cleaned[32];
     strncpy(cleaned, operand, sizeof(cleaned) - 1);
@@ -407,7 +407,7 @@ void *register_indirect_addressing(CPU *cpu, const char *operand) {
         return NULL;
     }
 
-    printf("register_indirect_addressing : %s\n", operand);
+    // printf("register_indirect_addressing : %s\n", operand);
 
     char cleaned[32];
     strncpy(cleaned, operand, sizeof(cleaned) - 1);
@@ -540,12 +540,9 @@ void *store(MemoryHandler *handler, const char *segment_name, int pos, void *dat
     }
 
     // Vérifier si la mémoire est déjà allouée
-    // @todo si on n'empeche pas d'écrire sur une cases non vide, on ne pourra pas libérer la mémoire de l'ancienne
-    // valeur.
-    // @todo on pourrait faire un free avant de réécrire ???
     if (handler->memory[s->start + pos] != NULL) {
-        printf("On modifie la mémoire à la position %d du segment %s : %d -> %d.\n", pos, segment_name,
-               *(int *)handler->memory[s->start + pos], *(int *)data);
+        // printf("On modifie la mémoire à la position %d du segment %s : %d -> %d.\n", pos, segment_name,
+        //        *(int *)handler->memory[s->start + pos], *(int *)data);
         free(handler->memory[s->start + pos]);
     }
     // Allouer la mémoire pour la nouvelle valeur
@@ -1251,11 +1248,19 @@ int execute_instruction(CPU *cpu, Instruction *instr) {
     } else {
         if (instr->operand1 != NULL) {
             dest = resolve_addressing(cpu, instr->operand1, instr->mnemonic);
+            if (dest == NULL) {
+                printf("Erreur : impossible de résoudre l'opérande %s.\n", instr->operand1);
+                return -1;
+            }
             printf("DEST: %d\n", *(int *)dest);
         }
 
         if (instr->operand2 != NULL) {
             src = resolve_addressing(cpu, instr->operand2, instr->mnemonic);
+            if (src == NULL) {
+                printf("Erreur : impossible de résoudre l'opérande %s.\n", instr->operand2);
+                return -1;
+            }
             printf("SRC: %d\n", *(int *)src);
         }
         return handle_instruction(cpu, instr, src, dest);
@@ -1331,12 +1336,36 @@ int run_program(CPU *cpu) {
 
         if (r == -1) {
             printf("Erreur lors de l'exécution de l'instruction.\n");
-            break;
+            return -1;
         }
 
+        // Affichage de l'état après chaque instruction
+        // print_data_segment(cpu);
+        // print_registres_et_drapeaux(cpu);
+        // print_stack_segment(cpu);
+        // print_extra_segment(cpu);
+
         print_registres_et_drapeaux(cpu);
-        print_stack_segment(cpu);
-        // display_stack_segment(cpu);
+        if (hashmap_get(cpu->memory_handler->allocated, "DS") != NULL) {
+            print_data_segment(cpu);
+        } else {
+            printf("Segment DS non alloué.\n");
+        }
+        if (hashmap_get(cpu->memory_handler->allocated, "CS") != NULL) {
+            printf("Segment CS alloué.\n");
+        } else {
+            printf("Segment CS non alloué.\n");
+        }
+        if (hashmap_get(cpu->memory_handler->allocated, "SS") != NULL) {
+            print_stack_segment(cpu);
+        } else {
+            printf("Segment SS non alloué.\n");
+        }
+        if (hashmap_get(cpu->memory_handler->allocated, "ES") != NULL) {
+            print_extra_segment(cpu);
+        } else {
+            printf("Segment ES non alloué.\n");
+        }
     }
 
     printf("\n=== ÉTAT FINAL ===\n");
@@ -1476,12 +1505,15 @@ int alloc_es_segment(CPU *cpu) {
             // On libère tous les zeros déjà alloués
             for (int j = 0; j < i; j++) {
                 free(cpu->memory_handler->memory[es_segment->start + j]);
+                cpu->memory_handler->memory[es_segment->start + j] = NULL;
+                hashmap_remove(cpu->memory_handler->allocated, "ES");
             }
             int rem = remove_segment(cpu->memory_handler, "ES");
             if (rem == -1) {
                 printf("Erreur : échec de la suppression du segment ES.\n");
             }
             *zf = 1;
+            free(zero);
             return -1;
         }
     }
@@ -1517,6 +1549,7 @@ int free_es_segment(CPU *cpu) {
             return -1;
         }
         free(val);
+        cpu->memory_handler->memory[es_segment->start + i] = NULL;
     }
 
     // Supprimer le segment ES de la table des segments alloués

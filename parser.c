@@ -87,8 +87,6 @@ Instruction *parse_code_instruction(const char *line, HashMap *labels, int code_
         return NULL;
     }
 
-    char label[20] = "", inst[20] = "", op1[20] = "", op2[20] = "";
-
     char *line_copy = strdup(line);
     if (line_copy == NULL) {
         perror("Erreur d'allocation de la mémoire pour la copie de la ligne");
@@ -96,38 +94,43 @@ Instruction *parse_code_instruction(const char *line, HashMap *labels, int code_
         return NULL;
     }
 
-    // Supprimer le caractère de nouvelle ligne à la fin
     size_t len = strlen(line_copy);
-    if (len > 0 && line_copy[len - 1] == '\n') {
+    if (len > 0 && line_copy[len - 1] == '\n')
         line_copy[len - 1] = '\0';
+
+    // Détection de label hors des crochets
+    char *point_p = line_copy;
+    int crochet_cpt = 0;
+    char *point_label = NULL;
+    while (*point_p) {
+        if (*point_p == '[')
+            crochet_cpt++;
+        if (*point_p == ']')
+            crochet_cpt--;
+        if (*point_p == ':' && crochet_cpt == 0) {
+            point_label = point_p;
+            break;
+        }
+        point_p++;
     }
 
-    if (strchr(line_copy, ':')) { // Si une étiquette est présente
-        char *token = strtok(line_copy, ":");
-        strcpy(label, token);
-
-        //@todo on devrait plutot insérer dans label
-        hashmap_insert(labels, label, (void *)(long)code_count);
-
-        token = strtok(NULL, " ");
-        if (token)
-            strcpy(inst, token);
-
-        token = strtok(NULL, ",");
-        if (token)
-            strcpy(op1, token);
-
-        token = strtok(NULL, " ");
-        if (token)
-            strcpy(op2, token);
-
-    } else { // Pas d'étiquette, lecture normale
-        sscanf(line_copy, "%19s %19[^,], %19s", inst, op1, op2);
+    char inst[16] = "", op1[16] = "", op2[16] = "";
+    if (point_label) {
+        *point_label = '\0';
+        while (*(++point_label) == ' ')
+            ;
+        hashmap_insert(labels, line_copy, (void *)(long)code_count);
+        sscanf(point_label, "%63s %63[^,], %63s", inst, op1, op2);
+    } else {
+        sscanf(line_copy, "%63s %63[^,], %63s", inst, op1, op2);
     }
 
-    instruction->mnemonic = strdup(inst);
-    instruction->operand1 = strdup(op1);
-    instruction->operand2 = strdup(op2);
+    if (inst != NULL)
+        instruction->mnemonic = strdup(inst);
+    if (op1 != NULL)
+        instruction->operand1 = strdup(op1);
+    if (op2 != NULL)
+        instruction->operand2 = strdup(op2);
 
     if (!instruction->mnemonic || !instruction->operand1 || !instruction->operand2) {
         perror("Erreur d'allocation de la mémoire pour les champs de l'instruction");
@@ -174,6 +177,9 @@ ParserResult *parse(const char *filename) {
 
     while (fgets(line, sizeof(line), file)) {
         if (line[0] == '\n' || line[0] == '\0' || line[0] == ';')
+            continue;
+
+        if ((strncmp(line, "//", 2) == 0) || (line[0] == '#'))
             continue;
 
         if (strncmp(line, ".DATA", 5) == 0) {

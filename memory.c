@@ -194,7 +194,9 @@ void memory_destroy(MemoryHandler *handler) {
     hashmap_destroy(handler->allocated);
 
     for (int i = 0; i < handler->total_size; i++) {
-        free(handler->memory[i]);
+        if (handler->memory[i] != NULL) {
+            free(handler->memory[i]);
+        }
     }
     free(handler->memory);
     free(handler);

@@ -80,7 +80,7 @@ int main(void) {
     print_extra_segment(cpu);
 
     printf("=== FIN ===\n");
-    // free_parser_result(pr);
-    // cpu_destroy(cpu);
+    free_parser_result(pr);
+    cpu_destroy(cpu);
     return 0;
 }

@@ -4,9 +4,32 @@ b DW 1
 
 .CODE
 start:  MOV AX, a      
-MOV BX, b       
+MOV BX, b
+
+// Alocation d'un ES de taille 3
+MOV AX, 4
 ALLOC   
 MOV AX, 0
-MOV [ES:AX],10
-FREE            
+MOV [ES:AX],AX
+MOV AX, 1
+MOV [ES:AX],AX
+MOV AX, 2
+MOV [ES:AX],AX
+FREE
+
+// Alocation d'un ES de taille 12    
+MOV AX, 12
+ALLOC  
+//Allocation hors borne 
+MOV AX, 15
+MOV [ES:AX],764
+FREE
+
+// Alocation d'un ES de taille 3  
+MOV AX, 3
+ALLOC   
+MOV AX, 1
+MOV [ES:AX],764
+FREE
+
 HALT
