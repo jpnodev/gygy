@@ -834,6 +834,52 @@ void allocate_stack_segment(CPU *cpu) {
     printf("SP: %d\n", *sp);
 }
 
+void print_stack_segment(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : CPU est NULL.\n");
+        return;
+    }
+
+    Segment *ss = hashmap_get(cpu->memory_handler->allocated, "SS");
+    if (ss == NULL) {
+        printf("Erreur : segment de pile 'SS' introuvable.\n");
+        return;
+    }
+
+    int *sp = (int *)hashmap_get(cpu->context, "SP");
+    int *bp = (int *)hashmap_get(cpu->context, "BP");
+
+    if (sp == NULL || bp == NULL) {
+        printf("Erreur : registres SP ou BP introuvables.\n");
+        return;
+    }
+
+    printf("Contenu du segment de pile 'SS' (de %d à %d) :\n", ss->start, ss->start + ss->size - 1);
+    int count = 0;
+    for (int i = 0; i < ss->size; i++) {
+        int addr = ss->start + i;
+        int *val = (int *)(cpu->memory_handler->memory[addr]);
+
+        if (val != NULL) {
+            printf("SS[%d] = %d", i, *val);
+
+            if (addr == *sp) {
+                printf(" <-- SP");
+            }
+            if (addr == *bp) {
+                printf(" <-- BP");
+            }
+
+            printf("\n");
+            count++;
+        }
+    }
+
+    if (count == 0) {
+        printf("Pile vide (aucune case utilisée).\n");
+    }
+}
+
 #pragma endregion
 
 #pragma region CodeSegment
@@ -1072,6 +1118,32 @@ int handle_POP(CPU *cpu, void *dest) {
     return 0;
 }
 
+int handle_ALLOC(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : argument invalide (cpu est NULL).\n");
+        return -1;
+    }
+    int res = alloc_es_segment(cpu);
+    if (res == -1) {
+        printf("Erreur : échec de l'allocation du segment ES.\n");
+        return -1;
+    }
+    return 0;
+}
+
+int handle_FREE(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : argument invalide (cpu est NULL).\n");
+        return -1;
+    }
+    int res = free_es_segment(cpu);
+    if (res == -1) {
+        printf("Erreur : échec de la libération du segment ES.\n");
+        return -1;
+    }
+    return 0;
+}
+
 int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
     if (cpu == NULL || instr == NULL) {
         printf("Erreur : argument invalide.\n");
@@ -1133,6 +1205,11 @@ int handle_instruction(CPU *cpu, Instruction *instr, void *src, void *dest) {
         // dest (operand 2) n'est pas utilisé
         return handle_POP(cpu, src);
 
+    } else if (strncmp(instr->mnemonic, "ALLOC", 5) == 0) {
+        return handle_ALLOC(cpu);
+
+    } else if (strncmp(instr->mnemonic, "FREE", 4) == 0) {
+        return handle_FREE(cpu);
     } else {
         printf("Erreur : instruction \"%s\" non reconnue.\n", instr->mnemonic);
         return -1;
@@ -1156,7 +1233,8 @@ int execute_instruction(CPU *cpu, Instruction *instr) {
         src = resolve_addressing(cpu, instr->operand1, instr->mnemonic);
         printf("SRC: %d\n", *(int *)src);
         return handle_instruction(cpu, instr, src, dest);
-    } else if (strncmp(instr->mnemonic, "HALT", 4) == 0) {
+    } else if (strncmp(instr->mnemonic, "HALT", 4) == 0 || strncmp(instr->mnemonic, "ALLOC", 5) == 0
+                || strncmp(instr->mnemonic, "FREE", 4) == 0) {
         return handle_instruction(cpu, instr, src, dest);
     } else {
         if (instr->operand1 != NULL) {
@@ -1245,6 +1323,7 @@ int run_program(CPU *cpu) {
         }
 
         print_registres_et_drapeaux(cpu);
+        print_stack_segment(cpu);
         // display_stack_segment(cpu);
     }
 
