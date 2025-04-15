@@ -1,5 +1,5 @@
-#include "memory.h"
 #include "debug.h"
+#include "memory.h"
 
 MemoryHandler *memory_init(int size) {
     MemoryHandler *mem = (MemoryHandler *)malloc(sizeof(MemoryHandler));
@@ -181,7 +181,7 @@ void memory_destroy(MemoryHandler *handler) {
         return;
     }
 
-    display_segments(handler->free_list);
+    // display_segments(handler->free_list);
     Segment *temp = handler->free_list;
     while (temp != NULL) {
         Segment *next = temp->next;
@@ -189,7 +189,7 @@ void memory_destroy(MemoryHandler *handler) {
         temp = next;
     }
     handler->free_list = NULL;
-    display_segments(handler->free_list);
+    // display_segments(handler->free_list);
 
     hashmap_destroy(handler->allocated);
 

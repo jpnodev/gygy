@@ -1,6 +1,6 @@
+#include "debug.h"
 #include "hachage.h"
 #include "memory.h"
-#include "debug.h"
 
 unsigned long simple_hash(const char *str) {
     if (str == NULL)
@@ -153,8 +153,7 @@ void hashmap_destroy(HashMap *map) {
                 }
                 break;
             case SEGMENT:
-                printf("libération des segments en hashmap\n");
-                display_segments((Segment *)map->table[i].value);
+                // printf("libération des segments en hashmap
                 if (map->table[i].value != NULL) {
                     Segment *s = (Segment *)map->table[i].value;
                     while (s != NULL) {

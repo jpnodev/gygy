@@ -22,4 +22,5 @@ void display_memory(MemoryHandler *mem);
 // et son opérande 2 (si ce dernier existe), en les encadrant de guillemets.
 void display_instructions(Instruction **liste, int count);
 void display_stack_segment(CPU *cpu);
+void print_extra_segment(CPU *cpu);
 #endif

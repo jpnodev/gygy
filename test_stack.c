@@ -70,7 +70,9 @@ int main(void) {
     printf("=== RUN PROGRAMME ===\n");
     run_program(cpu);
 
-    free_parser_result(pr);
+    printf("=== LIBERATION MEMOIRE ===\n");
+
     cpu_destroy(cpu);
+    free_parser_result(pr);
     return 0;
 }

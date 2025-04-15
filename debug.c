@@ -157,3 +157,32 @@ void display_stack_segment(CPU *cpu) {
         printf("Pile vide (aucune case utilisée).\n");
     }
 }
+
+void print_extra_segment(CPU *cpu) {
+    if (cpu == NULL) {
+        printf("Erreur : CPU est NULL.\n");
+        return;
+    }
+
+    Segment *es = hashmap_get(cpu->memory_handler->allocated, "ES");
+    if (es == NULL) {
+        printf("Segment 'ES' non alloué.\n");
+        return;
+    }
+
+    printf("Contenu du segment 'ES' (de %d à %d) :\n", es->start, es->start + es->size - 1);
+    int count = 0;
+    for (int i = 0; i < es->size; i++) {
+        int addr = es->start + i;
+        int *val = (int *)(cpu->memory_handler->memory[addr]);
+
+        if (val != NULL) {
+            printf("ES[%d] = %d\n", i, *val);
+            count++;
+        }
+    }
+
+    if (count == 0) {
+        printf("Segment 'ES' vide.\n");
+    }
+}
