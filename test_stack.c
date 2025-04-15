@@ -72,7 +72,7 @@ int main(void) {
 
     printf("=== LIBERATION MEMOIRE ===\n");
 
-    cpu_destroy(cpu);
     free_parser_result(pr);
+    cpu_destroy(cpu);
     return 0;
 }

@@ -212,7 +212,7 @@ int search_and_replace(char **str, HashMap *values) {
 
                 int key_len = strlen(key);
                 int repl_len = strlen(replacement);
-                //int remain_len = strlen(substr + key_len);
+                // int remain_len = strlen(substr + key_len);
 
                 // Create new string
                 char *new_str = (char *)malloc(strlen(input) - key_len + repl_len + 1);
@@ -299,6 +299,8 @@ void *immediate_addressing(CPU *cpu, const char *operand) {
         return NULL;
     }
 
+    printf("immediate_addressing : %s\n", operand);
+
     char cleaned[32];
     strncpy(cleaned, operand, sizeof(cleaned) - 1);
     cleaned[sizeof(cleaned) - 1] = '\0';
@@ -335,6 +337,8 @@ void *register_addressing(CPU *cpu, const char *operand) {
         return NULL;
     }
 
+    printf("register_addressing: %s\n", operand);
+
     char cleaned[32];
     strncpy(cleaned, operand, sizeof(cleaned) - 1);
     cleaned[sizeof(cleaned) - 1] = '\0';
@@ -354,9 +358,12 @@ void *register_addressing(CPU *cpu, const char *operand) {
     return NULL;
 }
 
+//@todo cause une fuite mémoire un malloc n'est jamais libéré
 void *memory_direct_addressing(CPU *cpu, const char *operand, const char *mnemonic) {
     if (cpu == NULL || operand == NULL || mnemonic == NULL)
         return NULL;
+
+    printf("memory_direct_addressing : %s\n", operand);
 
     char cleaned[32];
     strncpy(cleaned, operand, sizeof(cleaned) - 1);
@@ -400,6 +407,8 @@ void *register_indirect_addressing(CPU *cpu, const char *operand) {
         return NULL;
     }
 
+    printf("register_indirect_addressing : %s\n", operand);
+
     char cleaned[32];
     strncpy(cleaned, operand, sizeof(cleaned) - 1);
     cleaned[sizeof(cleaned) - 1] = '\0';
@@ -428,13 +437,16 @@ void *segment_override_addressing(CPU *cpu, const char *operand) {
 
     // Valider le format d'adressage avec une expression régulière
     if (!matches("^\\[(DS|CS|SS|ES):(AX|BX|CX|DX)\\]$", operand)) {
-        printf("Erreur : format d'adressage invalide : %s\n", operand);
         return NULL;
     }
 
+    printf("segment_override_addressing : %s\n", operand);
     // Extraire le segment et le registre correspondants
     char segment[3] = "  \n";
     char registre[3] = "  \n";
+    printf("Operand : %s\n", operand);
+    printf("segment : %s\n", segment);
+    printf("registre : %s\n", registre);
     if (sscanf(operand, "[%2s:%2s]", segment, registre) != 2) {
         printf("Erreur : extraction du segment et du registre a échoué : %s\n", operand);
         return NULL;
@@ -492,6 +504,10 @@ void *resolve_addressing(CPU *cpu, const char *operand, const char *mnemonic) {
         return result;
 
     result = register_indirect_addressing(cpu, operand);
+    if (result != NULL)
+        return result;
+
+    result = segment_override_addressing(cpu, operand);
     if (result != NULL)
         return result;
 
@@ -687,14 +703,14 @@ int push_value(CPU *cpu, int value) {
         printf("Erreur : segment de pile introuvable.\n");
         return -1;
     }
-    printf("SS start: %d\n", ss->start);
+    // printf("SS start: %d\n", ss->start);
 
     int *sp = (int *)hashmap_get(cpu->context, "SP");
     if (sp == NULL) {
         printf("Erreur : registre SP introuvable.\n");
         return -1;
     }
-    printf("SP : %d\n", *sp);
+    // printf("SP : %d\n", *sp);
 
     if (*sp - 1 < ss->start) {
         printf("Erreur : stack overflow\n");
@@ -1233,8 +1249,8 @@ int execute_instruction(CPU *cpu, Instruction *instr) {
         src = resolve_addressing(cpu, instr->operand1, instr->mnemonic);
         printf("SRC: %d\n", *(int *)src);
         return handle_instruction(cpu, instr, src, dest);
-    } else if (strncmp(instr->mnemonic, "HALT", 4) == 0 || strncmp(instr->mnemonic, "ALLOC", 5) == 0
-                || strncmp(instr->mnemonic, "FREE", 4) == 0) {
+    } else if (strncmp(instr->mnemonic, "HALT", 4) == 0 || strncmp(instr->mnemonic, "ALLOC", 5) == 0 ||
+               strncmp(instr->mnemonic, "FREE", 4) == 0) {
         return handle_instruction(cpu, instr, src, dest);
     } else {
         if (instr->operand1 != NULL) {

@@ -5,6 +5,8 @@ b DW 1
 .CODE
 start:  MOV AX, a      
 MOV BX, b       
-ALLOC
+ALLOC   
+MOV AX, 0
+MOV [ES:AX],10
 FREE            
 HALT

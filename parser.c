@@ -237,7 +237,7 @@ void liberer_instruction(Instruction *i) {
     free(i->mnemonic);
     free(i->operand1);
     free(i->operand2);
-    free(i);
+    // free(i);
 }
 
 void free_parser_result(ParserResult *result) {
