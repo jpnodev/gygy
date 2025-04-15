@@ -42,6 +42,8 @@ run_cpu_adressing: $(TEST_CPU_ADRESSING_EXEC)
 run_stack: $(TEST_STACK_EXEC)
 	./$(TEST_STACK_EXEC)
 
+run_extra: $(TEST_EXTRA_EXEC)
+	./$(TEST_EXTRA_EXEC)
 # ============================
 # Compilation de l'exécutable principal
 # ============================
@@ -70,9 +72,6 @@ $(TEST_CPU_ADRESSING_EXEC): debug.o hachage.o memory.o cpu.o parser.o test_cpu_a
 
 $(TEST_STACK_EXEC): debug.o hachage.o memory.o cpu.o parser.o test_stack.o 
 	$(CC) -o $@ $^
-
-$(TEST_EXTRA_EXEC): debug.o hachage.o memory.o cpu.o parser.o test_extra.o 
-	$(CC) -o $@ $^
 # ============================
 # Règle de compilation générique pour tous les fichiers .c
 # ============================
@@ -85,7 +84,7 @@ $(TEST_EXTRA_EXEC): debug.o hachage.o memory.o cpu.o parser.o test_extra.o
 # ============================
 
 clean:
-	rm -f *.o $(MAIN_EXEC) $(TEST_HACHAGE_EXEC) $(TEST_MEMORY_EXEC) $(TEST_PARSER_EXEC) $(TEST_CPU_EXEC) $(TEST_CPU_ADRESSING_EXEC) $(TEST_STACK_EXEC) $(TEST_EXTRA_EXEC)
+	rm -f *.o $(MAIN_EXEC) $(TEST_HACHAGE_EXEC) $(TEST_MEMORY_EXEC) $(TEST_PARSER_EXEC) $(TEST_CPU_EXEC) $(TEST_CPU_ADRESSING_EXEC) $(TEST_STACK_EXEC)
 
 # Nettoyage complet (fichiers temporaires en plus)
 mrproper: clean
