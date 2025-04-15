@@ -120,17 +120,15 @@ Instruction *parse_code_instruction(const char *line, HashMap *labels, int code_
         while (*(++point_label) == ' ')
             ;
         hashmap_insert(labels, line_copy, (void *)(long)code_count);
-        sscanf(point_label, "%63s %63[^,], %63s", inst, op1, op2);
+        sscanf(point_label, "%15s %15[^,], %15s", inst, op1, op2);
     } else {
-        sscanf(line_copy, "%63s %63[^,], %63s", inst, op1, op2);
+        sscanf(point_label, "%15s %15[^,], %15s", inst, op1, op2);
     }
 
-    if (inst != NULL)
-        instruction->mnemonic = strdup(inst);
-    if (op1 != NULL)
-        instruction->operand1 = strdup(op1);
-    if (op2 != NULL)
-        instruction->operand2 = strdup(op2);
+    instruction->mnemonic = strdup(inst);
+    instruction->operand1 = strdup(op1);
+    instruction->operand2 = strdup(op2);
+
 
     if (!instruction->mnemonic || !instruction->operand1 || !instruction->operand2) {
         perror("Erreur d'allocation de la mémoire pour les champs de l'instruction");
