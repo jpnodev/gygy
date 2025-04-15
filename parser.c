@@ -231,26 +231,37 @@ ParserResult *parse(const char *filename) {
     return result;
 }
 
-void liberer_instruction(Instruction *i) {
-    if (i == NULL)
-        return;
-    free(i->mnemonic);
-    free(i->operand1);
-    free(i->operand2);
-    // free(i);
-}
+// void liberer_instruction(Instruction *i) {
+//     if (i == NULL)
+//         return;
+//     free(i->mnemonic);
+//     free(i->operand1);
+//     free(i->operand2);
+//     // free(i);
+// }
 
 void free_parser_result(ParserResult *result) {
     if (result == NULL)
         return;
 
     for (int i = 0; i < result->data_count; i++) {
-        liberer_instruction(result->data_instructions[i]);
+        Instruction *inst = result->data_instructions[i];
+        if (inst == NULL)
+            continue;
+        free(inst->mnemonic);
+        free(inst->operand1);
+        free(inst->operand2);
+        free(inst);
     }
     free(result->data_instructions);
 
     for (int i = 0; i < result->code_count; i++) {
-        liberer_instruction(result->code_instructions[i]);
+        Instruction *inst = result->code_instructions[i];
+        if (inst == NULL)
+            continue;
+        free(inst->mnemonic);
+        free(inst->operand1);
+        free(inst->operand2);
     }
     free(result->code_instructions);
 

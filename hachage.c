@@ -141,7 +141,8 @@ void hashmap_destroy(HashMap *map) {
     }
     for (int i = 0; i < map->size; i++) {
         if (map->table[i].key != NULL && map->table[i].key != TOMBSTONE) {
-            free(map->table[i].key);
+            if (map->table[i].key != NULL)
+                free(map->table[i].key);
 
             // Suppression de la valeur selon son type
             switch (map->type) {
@@ -171,6 +172,8 @@ void hashmap_destroy(HashMap *map) {
         }
     }
 
-    free(map->table);
-    free(map);
+    if (map->table != NULL)
+        free(map->table);
+    if (map != NULL)
+        free(map);
 }

@@ -717,27 +717,10 @@ int push_value(CPU *cpu, int value) {
         return -1;
     }
 
-    // On cherche la valeur dans constant pool
-    int *valeur = (int *)hashmap_get(cpu->constant_pool, "value");
+    int *valeur = (int *)malloc(sizeof(int));
     if (valeur == NULL) {
-        // Si la valeur n'est pas trouvée, on l'alloue
-        valeur = (int *)malloc(sizeof(int));
-        if (valeur == NULL) {
-            perror("Erreur d'allocation pour valeur");
-            return -1;
-        }
-        *valeur = value;
-
-        // Convertir la valeur en chaîne de caractères
-        char snum[20];
-        sprintf(snum, "%d", value);
-
-        int res_insert = hashmap_insert(cpu->constant_pool, snum, valeur);
-        if (res_insert != 1) {
-            printf("Erreur : échec de l'insertion dans le pool constant.\n");
-            free(valeur);
-            return -1;
-        }
+        printf("Erreur d'allocation mémoire pour la valeur.\n");
+        return -1;
     }
 
     *valeur = value;
@@ -1003,6 +986,7 @@ int handle_CMP(CPU *cpu, void *src, void *dest) {
 int handle_JMP(CPU *cpu, void *adress) {
     if (cpu == NULL || adress == NULL) {
         printf("Erreur : argument invalide.\n");
+        free(adress);
         return -1;
     }
 
@@ -1011,43 +995,51 @@ int handle_JMP(CPU *cpu, void *adress) {
     Segment *CS = hashmap_get(cpu->memory_handler->allocated, "CS");
     if (CS == NULL) {
         printf("Erreur : segment de code CS introuvable.\n");
+        free(adress);
         return -1;
     }
 
     int *IP = (int *)hashmap_get(cpu->context, "IP");
     if (IP == NULL) {
         printf("Erreur : registre IP introuvable.\n");
+        free(adress);
         return -1;
     }
 
     *IP = CS->start + *val;
+    free(adress);
     return 0;
 }
 
 int handle_JZ(CPU *cpu, void *adress) {
     if (cpu == NULL || adress == NULL) {
         printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
+        free(adress);
         return -1;
     }
 
     int *ZF = (int *)hashmap_get(cpu->context, "ZF");
     if (ZF == NULL) {
         printf("Drapeau ZF non trouvée\n");
+        free(adress);
         return -1;
     }
     int *IP = (int *)hashmap_get(cpu->context, "IP");
     if (IP == NULL) {
         printf("Erreur : registre IP introuvable.\n");
+        free(adress);
         return -1;
     }
     Segment *CS = (Segment *)hashmap_get(cpu->memory_handler->allocated, "CS");
     if (CS == NULL) {
         printf("Erreur : segment de code CS introuvable.\n");
+        free(adress);
         return -1;
     }
 
     if (*ZF == 1 && CS != NULL && IP != NULL) {
         *IP = CS->start + *(int *)adress; // <== добавляем смещение сегмента
+        free(adress);
     }
     return 0;
 }
@@ -1055,20 +1047,24 @@ int handle_JZ(CPU *cpu, void *adress) {
 int handle_JNZ(CPU *cpu, void *adress) {
     if (cpu == NULL || adress == NULL) {
         printf("Erreur : argument invalide (cpu, src ou dest est NULL).\n");
+        free(adress);
         return -1;
     }
     int *ZF = (int *)hashmap_get(cpu->context, "ZF");
     if (ZF == NULL) {
         printf("Drapeau ZF non trouvée\n");
+        free(adress);
         return -1;
     }
     int *IP = (int *)hashmap_get(cpu->context, "IP");
     if (IP == NULL) {
         printf("Erreur : registre IP introuvable.\n");
+        free(adress);
         return -1;
     }
     if (*ZF == 0) {
         *IP = *(int *)adress;
+        free(adress);
     }
     return 0;
 }
