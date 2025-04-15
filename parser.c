@@ -122,7 +122,7 @@ Instruction *parse_code_instruction(const char *line, HashMap *labels, int code_
         hashmap_insert(labels, line_copy, (void *)(long)code_count);
         sscanf(point_label, "%15s %15[^,], %15s", inst, op1, op2);
     } else {
-        sscanf(point_label, "%15s %15[^,], %15s", inst, op1, op2);
+        sscanf(line_copy, "%15s %15[^,], %15s", inst, op1, op2);
     }
 
     instruction->mnemonic = strdup(inst);

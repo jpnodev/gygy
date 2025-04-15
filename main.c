@@ -173,6 +173,80 @@ int main(void) {
     printf("\n\n");
 
     printf("\n=== TEST 4: AJOUT DU EXTRA ===\n");
-    
+
+    cpu = cpu_init(MEMORY_SIZE);
+    if (!cpu) {
+        printf("Erreur : échec de l'initialisation du CPU.\n");
+        return -1;
+    }
+
+    reset_parse_offset();
+
+    printf("\n=== lecture du ficher ===\n");
+    pr = parse("test_extra.txt");
+    if (pr == NULL) {
+        cpu_destroy(cpu);
+        return -1;
+    }
+
+    printf("\n=== allocation data segment ===\n");
+    allocate_variables(cpu, pr->data_instructions, pr->data_count);
+    print_data_segment(cpu);
+
+    printf("\n=== allocation stack segment ===\n");
+    allocate_stack_segment(cpu);
+    display_stack_segment(cpu);
+
+    printf("\n=== allocation code segment ===\n");
+    allocate_code_segment(cpu, pr->code_instructions, pr->code_count);
+
+    printf("\n=== instructions initial ===\n");
+    afficher_instructions(pr->code_instructions, pr->code_count);
+
+    printf("\n=== resolve constats ===\n");
+    if (resolve_constants(pr) == -1) {
+        printf("Erreur : échec de la résolution des constantes.\n");
+        free_parser_result(pr);
+        cpu_destroy(cpu);
+        return -1;
+    }
+
+    printf("\n=== instruction after resolve ===\n");
+    afficher_instructions(pr->code_instructions, pr->code_count);
+
+    printf("=== test allocation extra segment (ES) ===\n");
+
+    int *AX = hashmap_get(cpu->context, "AX");
+    int *BX = hashmap_get(cpu->context, "BX");
+    int *ZF = hashmap_get(cpu->context, "ZF");
+
+    if (!AX || !BX || !ZF) {
+        printf("Erreur : registres AX, BX ou ZF non disponibles.\n");
+        free_parser_result(pr);
+        cpu_destroy(cpu);
+        return -1;
+    }
+
+    *AX = 5;
+    *BX = 1;
+    *ZF = 0;
+
+    if (alloc_es_segment(cpu) == 0) {
+        printf("Segment ES alloué avec succès.\n");
+    }
+    print_extra_segment(cpu);
+
+    printf("=== run programme ===\n");
+    run_program(cpu);
+
+    printf("=== liberation d'extra segment (ES) ===\n");
+    if (free_es_segment(cpu) == 0) {
+        printf("Segment ES libéré avec succès.\n");
+    }
+    print_extra_segment(cpu);
+
+    printf("=== FIN ===\n");
+    free_parser_result(pr);
+    cpu_destroy(cpu);
     return 0;
 }
