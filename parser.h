@@ -85,7 +85,10 @@ void free_parser_result(ParserResult *result);
 // Elle détruit également les deux tables de hachage : labels et memory_locations.
 // Enfin, elle libère la structure ParserResult elle-même.
 void liberer_instruction(Instruction *i);
-
+// Réinitialise l’offset mémoire utilisé pour les variables de la section .DATA.
+// Cette fonction remet la variable statique `taille` à 0,
+// ce qui permet de recommencer un nouveau parsing depuis le début de la mémoire.
 void reset_parse_offset();
+
 
 #endif
