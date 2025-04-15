@@ -687,14 +687,14 @@ int push_value(CPU *cpu, int value) {
         printf("Erreur : segment de pile introuvable.\n");
         return -1;
     }
-    printf("SS start: %d\n", ss->start);
+    //printf("SS start: %d\n", ss->start);
 
     int *sp = (int *)hashmap_get(cpu->context, "SP");
     if (sp == NULL) {
         printf("Erreur : registre SP introuvable.\n");
         return -1;
     }
-    printf("SP : %d\n", *sp);
+    //printf("SP : %d\n", *sp);
 
     if (*sp - 1 < ss->start) {
         printf("Erreur : stack overflow\n");
@@ -1361,6 +1361,12 @@ void print_registres_et_drapeaux(CPU *cpu) {
 
     int *SF = (int *)hashmap_get(cpu->context, "SF");
     printf("Drapeau SF: %s%d\n", SF ? "" : "non initialisé ", SF ? *SF : 0);
+
+    int *SP = (int *)hashmap_get(cpu->context, "SP");
+    printf("Drapeau SP: %s%d\n", SP ? "" : "non initialisé ", SP ? *SP : 0);
+
+    int *BP = (int *)hashmap_get(cpu->context, "BP");
+    printf("Drapeau BP: %s%d\n", BP ? "" : "non initialisé ", BP ? *BP : 0);
 }
 
 #pragma endregion
