@@ -72,6 +72,10 @@ $(TEST_CPU_ADRESSING_EXEC): debug.o hachage.o memory.o cpu.o parser.o test_cpu_a
 
 $(TEST_STACK_EXEC): debug.o hachage.o memory.o cpu.o parser.o test_stack.o 
 	$(CC) -o $@ $^
+
+$(TEST_EXTRA_EXEC): debug.o hachage.o memory.o cpu.o parser.o test_extra.o
+	$(CC) -o $@ $^
+
 # ============================
 # Règle de compilation générique pour tous les fichiers .c
 # ============================
