@@ -68,8 +68,6 @@ int main(void) {
     }
 
     printf("Valeur chargée depuis le segment DS : %d\n", *loaded_val);
-    free(val);
-
     free_parser_result(pr);
     cpu_destroy(cpu);
     return 0;

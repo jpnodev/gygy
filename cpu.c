@@ -530,9 +530,10 @@ void *store(MemoryHandler *handler, const char *segment_name, int pos, void *dat
     if (handler->memory[s->start + pos] != NULL) {
         printf("On modifie la mémoire à la position %d du segment %s : %d -> %d.\n", pos, segment_name,
                *(int *)handler->memory[s->start + pos], *(int *)data);
+        free(handler->memory[s->start + pos]);
     }
     // Allouer la mémoire pour la nouvelle valeur
-    hashmap_insert(handler->allocated, segment_name, data);
+    // hashmap_insert(handler->allocated, segment_name, data);
     handler->memory[s->start + pos] = data;
     return handler->memory[s->start + pos];
 }
