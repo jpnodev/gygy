@@ -1,5 +1,7 @@
 #include "parser.h"
 
+static int taille = 0;
+
 ParserResult *init() {
     ParserResult *pr = (ParserResult *)malloc(sizeof(ParserResult));
     if (pr == NULL) {
@@ -233,14 +235,14 @@ ParserResult *parse(const char *filename) {
     return result;
 }
 
-// void liberer_instruction(Instruction *i) {
-//     if (i == NULL)
-//         return;
-//     free(i->mnemonic);
-//     free(i->operand1);
-//     free(i->operand2);
-//     // free(i);
-// }
+void liberer_instruction(Instruction *i) {
+     if (i == NULL)
+         return;
+     free(i->mnemonic);
+     free(i->operand1);
+     free(i->operand2);
+     // free(i);
+}
 
 void free_parser_result(ParserResult *result) {
     if (result == NULL)
